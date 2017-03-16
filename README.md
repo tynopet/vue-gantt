@@ -1,4 +1,5 @@
 # vue-gantt
+<<<<<<< HEAD
 
 > Gantt diagram on vuejs
 
@@ -19,3 +20,6 @@ npm run build --report
 ```
 
 For detailed explanation on how things work, checkout the [guide](http://vuejs-templates.github.io/webpack/) and [docs for vue-loader](http://vuejs.github.io/vue-loader).
+=======
+Gantt diagram on vuejs
+>>>>>>> ac25971493c3cd26d615ac163cf4dcf8387c3b4f
