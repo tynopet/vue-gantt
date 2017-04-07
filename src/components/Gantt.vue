@@ -16,72 +16,21 @@
 </template>
 
 <script>
-  import moment from 'moment';
-  import RightPanel from './RightPanel';
+import { mapGetters } from 'vuex';
+import RightPanel from './RightPanel';
 
-  export default {
-    components: {
-      RightPanel,
-    },
-    created() {
-      let startDate = null;
-      let endDate = null;
-      this.rows.forEach((row) => {
-        row.values.forEach((value) => {
-          startDate = (startDate > value.from || startDate === null) ? value.from : startDate;
-          endDate = (endDate < value.to || endDate === null) ? value.to : endDate;
-          /*  eslint-disable no-param-reassign*/
-          value.from = moment(value.from);
-          value.to = moment(value.to);
-          /*  eslint-enable no-param-reassign*/
-        });
-        row.values.sort((a, b) => a.from - b.from);
-        this.values.push(row.values);
-      });
-      this.startDate = +moment(startDate).startOf('month') || +moment().startOf('month');
-      this.endDate = +moment(endDate).endOf('month') || +moment().endOf('month');
-    },
-    data() {
-      return {
-        legendHelp: 'Help',
-        rows: [
-          {
-            name: 'Задача 1',
-            link: '#0',
-            values: [
-              {
-                color: '#F9C4E1',
-                desc: 'Задача 1 просрочена!',
-                from: 1336171967000,
-                to: 1338995668000,
-              },
-              {
-                color: '#D0E4FD',
-                desc: 'Задача 1',
-                from: 1336135973000,
-                to: 1336171967000,
-              },
-            ],
-          },
-          {
-            name: 'Задача 2',
-            link: '#1',
-            values: [
-              {
-                color: '#D0E4FD',
-                desc: 'Задача 1',
-                from: 1338995668000,
-                to: 1338995683000,
-              },
-            ],
-          },
-        ],
-        startDate: null,
-        endDate: null,
-        values: [],
-      };
-    },
-  };
+export default {
+  components: {
+    RightPanel,
+  },
+  computed: {
+    ...mapGetters([
+      'startDate',
+      'endDate',
+      'values',
+    ]),
+  },
+};
 </script>
 
 <style>
