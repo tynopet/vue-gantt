@@ -16,7 +16,6 @@
 </template>
 
 <script>
-  import moment from 'moment';
   import RightPanel from './RightPanel';
 
   export default {
@@ -35,22 +34,16 @@
       },
     },
     created() {
-      let startDate = null;
-      let endDate = null;
-      this.rows.forEach((row) => {
-        row.values.forEach((value) => {
-          startDate = (startDate > value.from || startDate === null) ? value.from : startDate;
-          endDate = (endDate < value.to || endDate === null) ? value.to : endDate;
-          /*  eslint-disable no-param-reassign*/
-          value.from = moment(value.from);
-          value.to = moment(value.to);
-          /*  eslint-enable no-param-reassign*/
-        });
-        row.values.sort((a, b) => a.from - b.from);
-        this.values.push(row.values);
-      });
-      this.startDate = +moment(startDate).startOf('month') || +moment().startOf('month');
-      this.endDate = +moment(endDate).endOf('month') || +moment().endOf('month');
+      const { startDate, endDate, values } = this.rows.reduce((acc, r) => ({
+        ...r.values.reduce((d, v) => ({
+          startDate: (d.startDate > v.from || !d.startDate) ? v.from : d.startDate,
+          endDate: (d.endDate < v.to || !d.endDate) ? v.to : d.endDate,
+        }), { startDate: acc.startDate, endDate: acc.endDate }),
+        values: [...acc.values, r.values],
+      }), { startDate: this.startDate, endDate: this.endDate, values: this.values });
+      this.startDate = startDate;
+      this.endDate = endDate;
+      this.values = values;
     },
     data() {
       return {
