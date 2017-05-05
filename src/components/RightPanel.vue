@@ -29,7 +29,23 @@ const intervals = {
 };
 
 export default {
-  props: ['startDate', 'endDate', 'values'],
+  props: {
+    startDate: {
+      type: Number,
+      required: true,
+      default: 0,
+    },
+    endDate: {
+      type: Number,
+      required: true,
+      default: 0,
+    },
+    values: {
+      type: Array,
+      required: true,
+      default: 0,
+    },
+  },
   components: {
     GanttHeader,
     GanttBody,
