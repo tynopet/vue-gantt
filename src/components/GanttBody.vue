@@ -1,67 +1,69 @@
 <template>
   <div class="ganttBody">
-    <div class="task" v-for="task in tasks">
-      <div class="interval" 
-            :style="{ 'background-color': interval.color,
-                        width: interval.width + 'px',
-                        'margin-left': interval.offset + 'px',
-                        visibility: interval.visibility
-                    }" 
-            v-for="interval in task">{{interval.desc}}</div>
+    <div class="task" v-for="(task, idx) in tasks" :key="idx">
+      <div class="interval" :style="{ 'background-color': interval.color, width: interval.width + 'px', 'margin-left': interval.offset + 'px', display: interval.display }" v-for="interval in task" :key="interval">
+        {{interval.desc}}
+      </div>
     </div>
   </div>
 </template>
 
 <script>
+import isAfter from 'date-fns/is_after';
+import isBefore from 'date-fns/is_before';
+import memoize from 'lodash/memoize';
+
+const prepareDataToRender = memoize((start, end, rows, msInCell, cellWidth) =>
+  rows.map(row => row
+    .map(({ from, to, desc, color }, idx) => {
+      const offset = idx === 0 && (isAfter(from, start) && isBefore(from, end))
+        ? Math.ceil(((from - start) / msInCell) * cellWidth)
+        : 0;
+      const intervalStart = (isBefore(from, start) && isAfter(to, start))
+        ? start
+        : from;
+      const intervalEnd = (isBefore(from, end) && isAfter(to, end)) ? end : to;
+      const display = (isAfter(from, end) || isBefore(to, start)) ? 'none' : '';
+      const width = Math.ceil(
+        ((intervalEnd - intervalStart) / msInCell) * cellWidth,
+      );
+      return {
+        width,
+        offset,
+        desc,
+        color,
+        display,
+      };
+    })));
+
 export default {
-  props: ['viewport', 'rows', 'msInCell', 'cellWidth'],
-  data() {
-    return {
-      tasks: [],
-    };
-  },
-  watch: {
-    viewport(value) {
-      this.prepareDataToRender(value.startDate, value.endDate);
+  props: {
+    viewport: {
+      type: Object,
+      required: true,
+    },
+    rows: {
+      type: Array,
+      required: true,
+    },
+    msInCell: {
+      type: Number,
+      required: true,
+    },
+    cellWidth: {
+      type: Number,
+      required: true,
     },
   },
-  methods: {
-    prepareDataToRender(start, end) {
-      this.tasks = [];
-      this.rows.forEach((row) => {
-        const task = [];
-        row.forEach((interval, idx) => {
-          const bar = {
-            width: 0,
-            offset: 0,
-            desc: interval.desc,
-            color: interval.color,
-            visibility: 'visible',
-          };
-          let intervalStart = interval.from;
-          let intervalEnd = interval.to;
-          if (interval.from > start && interval.from < end) {
-            if (idx === 0) {
-              bar.offset = Math.ceil(((interval.from - start) / this.msInCell) * this.cellWidth);
-            }
-          }
-          if (interval.from < start && interval.to > start) {
-            intervalStart = start;
-          }
-          if (interval.from < end && interval.to > end) {
-            intervalEnd = end;
-          }
-          if (interval.from > end || interval.to < start) {
-            intervalStart = 0;
-            intervalEnd = 0;
-            bar.visibility = 'hidden';
-          }
-          bar.width = Math.ceil(((intervalEnd - intervalStart)
-                        / this.msInCell) * this.cellWidth);
-          task.push(bar);
-        });
-        this.tasks.push(task);
-      });
+  computed: {
+    tasks() {
+      return prepareDataToRender(
+        this.viewport.startDate,
+        this.viewport.endDate,
+        this.rows,
+        this.msInCell,
+        this.cellWidth,
+      );
     },
   },
 };

@@ -1,86 +1,74 @@
 <template>
-  <div class="right-panel">
-    <gantt-header :scale="scale"
-                :step="step"
-                :cellWidth="cellWidth"
-                :viewport="viewport"></gantt-header>
-    <gantt-body :viewport="viewport"
-                :cellWidth="cellWidth"
-                :rows="values"
-                :msInCell="msInCell"></gantt-body>
+  <div class="right-panel" @wheel="handleScroll">
+    <gantt-header :scale="scale" :step="step" :cellWidth="cellWidth" :viewport="viewport"></gantt-header>
+    <gantt-body :viewport="viewport" :cellWidth="cellWidth" :rows="values" :msInCell="msInCell"></gantt-body>
     <div class="options">
-      <input type="range" class="interval" :min="min" :max="max" :step="msInCell" v-model="rangeValue">
-      <select v-model="selected">
-        <option v-for="option in options" :value="option.value">{{ option.text }}</option>
+  
+      <input type="range" class="interval" :min="min" :max="max" :step="msInCell" v-model="rewind">
+      <select v-model="selectedScale">
+        <option v-for="option in options" :value="option.value" :key="option.value">{{ option.text }}</option>
       </select>
     </div>
   </div>
 </template>
 
 <script>
-import moment from 'moment';
+import dateFns from 'date-fns';
 import GanttHeader from './GanttHeader';
 import GanttBody from './GanttBody';
 
 const intervals = {
-  days: 'month',
-  hours: 'day',
-  minutes: 'hour',
+  days: 'Month',
+  hours: 'Day',
+  minutes: 'Hour',
+};
+
+const capitalize = str => str.charAt(0).toUpperCase() + str.slice(1);
+
+const calcViewport = (value, scale, cells, step) => {
+  const start = parseInt(value, 10);
+  const method = `add${capitalize(scale)}`;
+
+  const startDate = dateFns.parse(start);
+  const endDate = dateFns[method](dateFns.parse(start), cells * parseInt(step, 10));
+  return { startDate, endDate };
+};
+
+const getMsInScale = (scale) => {
+  switch (scale) {
+    case 'days':
+      return 86400000;
+    case 'hours':
+      return 3600000;
+    case 'minutes':
+      return 60000;
+    default:
+      return new Error('Invalid format');
+  }
 };
 
 export default {
-  props: ['startDate', 'endDate', 'values'],
   components: {
     GanttHeader,
     GanttBody,
   },
-  watch: {
-    rangeValue(value) {
-      this.calcViewport(value);
+  props: {
+    startDate: {
+      type: Date,
+      required: true,
     },
-    selected(value) {
-      [this.scale, this.step] = value.split(' ');
-      this.calcMsInCell();
-      this.calcViewport(this.rangeValue);
+    endDate: {
+      type: Date,
+      required: true,
     },
-  },
-  computed: {
-    min() {
-      return +moment(this.startDate).startOf(intervals[this.scale]);
-    },
-    max() {
-      return +moment(this.endDate).endOf(intervals[this.scale]);
-    },
-  },
-  methods: {
-    calcViewport(value) {
-      const start = parseInt(value, 10);
-      const startDate = moment(start);
-      const endDate = moment(start)
-                      .add(this.cellInViewport * parseInt(this.step, 10), this.scale);
-      this.viewport = { startDate, endDate };
-    },
-    calcMsInCell() {
-      switch (this.scale) {
-        case 'days':
-          this.msInCell = 86400000 * this.step;
-          break;
-        case 'hours':
-          this.msInCell = 3600000 * this.step;
-          break;
-        case 'minutes':
-          this.msInCell = 60000 * this.step;
-          break;
-        default:
-          console.error('Invalid format');
-      }
+    values: {
+      type: Array,
+      required: true,
     },
   },
   data() {
     return {
       cellWidth: 24,
-      cellInViewport: 0,
-      viewport: {},
       options: [
         { text: 'Дни', value: 'days 1' },
         { text: 'Часы 12', value: 'hours 12' },
@@ -96,20 +84,70 @@ export default {
       selected: 'days 1',
       scale: 'days',
       step: 1,
-      rangeValue: this.startDate,
-      msInCell: null,
-      dates: {
-        start: null,
-        end: null,
-      },
+      panelWidth: 0,
+      rangeValue: undefined,
     };
   },
-  created() {
-    this.calcMsInCell();
+  computed: {
+    min() {
+      const method = `startOf${intervals[this.scale]}`;
+      return dateFns.getTime(dateFns[method](this.startDate));
+    },
+    max() {
+      const method = `endOf${intervals[this.scale]}`;
+      return dateFns.getTime(dateFns[method](this.endDate));
+    },
+    rewind: {
+      get() {
+        return this.rangeValue || this.min;
+      },
+      set(value) {
+        this.rangeValue = value;
+      },
+    },
+    selectedScale: {
+      get() {
+        return this.selected;
+      },
+      set(value) {
+        this.selected = value;
+        [this.scale, this.step] = value.split(' ');
+        this.step = parseInt(this.step, 10);
+      },
+    },
+    viewport() {
+      const value = this.rangeValue || this.min;
+      return calcViewport(value, this.scale, this.cellInViewport, this.step);
+    },
+    cellInViewport() {
+      return Math.ceil(this.panelWidth / this.cellWidth);
+    },
+    msInCell() {
+      return getMsInScale(this.scale) * this.step;
+    },
+  },
+  methods: {
+    handleScroll(e) {
+      const newRewind = e.deltaY > 0
+        ? this.rewind + this.msInCell
+        : this.rewind - this.msInCell;
+      if (e.deltaY > 0) {
+        if (newRewind < this.max) {
+          this.rewind = newRewind;
+        } else {
+          this.rewind = this.max;
+        }
+      } else if (e.deltaY < 0) {
+        if (newRewind > this.min) {
+          this.rewind = newRewind;
+        } else {
+          this.rewind = this.min;
+        }
+      }
+    },
   },
   mounted() {
-    this.cellInViewport = Math.ceil(this.$el.clientWidth / this.cellWidth);
-    this.calcViewport(this.rangeValue);
+    this.panelWidth = this.$el.clientWidth;
   },
 };
 </script>
