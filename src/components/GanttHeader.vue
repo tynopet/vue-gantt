@@ -1,161 +1,165 @@
 <template>
   <div class="gantt-header">
-    <div class="row" v-for="row in rows">
-      <div class="row-item" v-for="obj in row" :style="{ width: obj.width + 'px' }">{{ obj.moment }}</div>
+    <div class="row" v-for="(row, idx) in rows" :key="idx">
+      <div class="row-item" v-for="(obj, idx) in row" :key="idx" :style="{ width: obj.width + 'px' }">{{ obj.label }}</div>
     </div>
   </div>
 </template>
 
 <script>
+import dateFns from 'date-fns';
+import memoize from 'lodash/memoize';
+
+const getDaysInMonth = memoize((start, end) => {
+  if (dateFns.isSameMonth(start, end)) {
+    return (dateFns.getDate(end) - dateFns.getDate(start)) + 1;
+  }
+  return (dateFns.getDaysInMonth(start) - dateFns.getDate(start)) + 1;
+});
+
+const getHoursInDay = memoize((start, end, step) => {
+  if (dateFns.isSameDay(start, end)) {
+    return ((dateFns.getHours(end) - dateFns.getHours(start)) + 1) / step;
+  }
+  return (24 - dateFns.getHours(start)) / step;
+});
+
+const getMinutesInHour = memoize((start, end, step) => {
+  if (dateFns.isSameHour(start, end)) {
+    return ((dateFns.getMinutes(end) - dateFns.getMinutes(start)) + 1) / step;
+  }
+  return (60 - dateFns.getMinutes(start)) / step;
+});
+
+const switchScale = (scale, step) => {
+  switch (scale) {
+    case 'days':
+      return [
+        {
+          method: dateFns.getYear,
+          addType: dateFns.addYears,
+          start: dateFns.startOfYear,
+          add: 1,
+          factor: 1,
+          get: (start, end) => dateFns.differenceInDays(end, start) + 1,
+        },
+        {
+          method: dateFns.getMonth,
+          addType: dateFns.addMonths,
+          start: dateFns.startOfMonth,
+          add: 1,
+          factor: 1,
+          get: getDaysInMonth,
+        },
+        {
+          method: dateFns.getDate,
+          addType: dateFns.addDays,
+          start: dateFns.startOfDay,
+          add: step,
+          factor: 1,
+          get: () => 1,
+        },
+      ];
+    case 'hours':
+      return [
+        {
+          method: dateFns.getMonth,
+          addType: dateFns.addMonths,
+          start: dateFns.startOfMonth,
+          add: 1,
+          factor: 24 / step,
+          get: getDaysInMonth,
+        },
+        {
+          method: dateFns.getDate,
+          addType: dateFns.addDays,
+          start: dateFns.startOfDay,
+          add: 1,
+          factor: 1,
+          get: getHoursInDay,
+        },
+        {
+          method: dateFns.getHours,
+          addType: dateFns.addHours,
+          start: dateFns.startOfHour,
+          add: step,
+          factor: 1,
+          get: () => 1,
+        },
+      ];
+    case 'minutes':
+      return [
+        {
+          method: dateFns.getDate,
+          addType: dateFns.addDays,
+          start: dateFns.startOfDay,
+          add: 1,
+          factor: 60,
+          get: getHoursInDay,
+        },
+        {
+          method: dateFns.getHours,
+          addType: dateFns.addHours,
+          start: dateFns.startOfHour,
+          add: 1,
+          factor: 1,
+          get: getMinutesInHour,
+        },
+        {
+          method: dateFns.getMinutes,
+          addType: dateFns.addMinutes,
+          start: dateFns.startOfMinute,
+          add: step,
+          factor: 1,
+          get: () => 1,
+        },
+      ];
+    default:
+      return new Error('Invalid format');
+  }
+};
+
+const prepareDataToRender = memoize((start, end, scales, cellWidth, step) => scales.map((scale) => {
+  const tmp = [];
+  for (let date = new Date(dateFns.getTime(start));
+    dateFns.isBefore(date, end);
+    date = scale.start(scale.addType(date, scale.add))) {
+    tmp.push({
+      label: scale.method(date),
+      width: cellWidth * scale.get(date, end, step) * scale.factor,
+    });
+  }
+  return tmp;
+}));
+
 export default {
-  props: ['viewport', 'scale', 'step', 'cellWidth'],
-  data() {
-    return {
-      rows: [],
-      scales: [],
-    };
+  props: {
+    viewport: {
+      type: Object,
+      required: true,
+    },
+    scale: {
+      type: String,
+      required: true,
+    },
+    step: {
+      type: Number,
+      required: true,
+    },
+    cellWidth: {
+      type: Number,
+      required: true,
+    },
   },
-  watch: {
-    viewport(value) {
-      this.prepareDataToRender(value.startDate, value.endDate);
-    },
-    scale() {
-      this.switchScale();
-    },
-    step() {
-      this.switchScale();
+  computed: {
+    rows() {
+      return prepareDataToRender(
+        this.viewport.startDate, this.viewport.endDate, this.scales, this.cellWidth, this.step,
+      );
     },
     scales() {
-      this.prepareDataToRender(this.viewport.startDate, this.viewport.endDate);
+      return switchScale(this.scale, this.step);
     },
-  },
-  methods: {
-    prepareDataToRender(start, end) {
-      this.rows = [];
-      this.scales.forEach((scale) => {
-        const tmp = [];
-        for (const date = start.clone(); date < end;
-              date.add(scale.add, scale.addType).startOf(scale.method)) {
-          tmp.push({
-            moment: date[scale.method](),
-            width: this.cellWidth * scale.get(date, end, this.step) * scale.factor,
-          });
-        }
-        this.rows.unshift(tmp);
-      });
-    },
-    getDaysInMonth(start, end) {
-      let days;
-      if (start.isSame(end, 'month')) {
-        days = (end.date() - start.date()) + 1;
-      } else {
-        days = (start.daysInMonth() - start.date()) + 1;
-      }
-      return days;
-    },
-    getHoursInDay(start, end, step) {
-      let hours;
-      if (start.isSame(end, 'day')) {
-        hours = ((end.hour() - start.hour()) + 1) / step;
-      } else {
-        hours = (24 - start.hour()) / step;
-      }
-      return hours;
-    },
-    getMinutesInHour(start, end, step) {
-      let minutes;
-      if (start.isSame(end, 'hour')) {
-        minutes = ((end.minute() - start.minute()) + 1) / step;
-      } else {
-        minutes = (60 - start.minute()) / step;
-      }
-      return minutes;
-    },
-    switchScale() {
-      switch (this.scale) {
-        case 'days':
-          this.scales = [
-            {
-              method: 'date',
-              addType: 'd',
-              add: this.step,
-              factor: 1,
-              get: () => 1,
-            },
-            {
-              method: 'month',
-              addType: 'M',
-              add: 1,
-              factor: 1,
-              get: this.getDaysInMonth,
-            },
-            {
-              method: 'year',
-              addType: 'y',
-              add: 1,
-              factor: 1,
-              get: (start, end) => end.diff(start, 'days') + 1,
-            },
-          ];
-          break;
-        case 'hours':
-          this.scales = [
-            {
-              method: 'hour',
-              addType: 'h',
-              add: this.step,
-              factor: 1,
-              get: () => 1,
-            },
-            {
-              method: 'date',
-              addType: 'd',
-              add: 1,
-              factor: 1,
-              get: this.getHoursInDay,
-            },
-            {
-              method: 'month',
-              addType: 'M',
-              add: 1,
-              factor: 24 / this.step,
-              get: this.getDaysInMonth,
-            },
-          ];
-          break;
-        case 'minutes':
-          this.scales = [
-            {
-              method: 'minute',
-              addType: 'm',
-              add: this.step,
-              factor: 1,
-              get: () => 1,
-            },
-            {
-              method: 'hour',
-              addType: 'h',
-              add: 1,
-              factor: 1,
-              get: this.getMinutesInHour,
-            },
-            {
-              method: 'date',
-              addType: 'd',
-              add: 1,
-              factor: 60,
-              get: this.getHoursInDay,
-            },
-          ];
-          break;
-        default:
-          console.error('Invalid format');
-      }
-    },
-  },
-
-  created() {
-    this.switchScale();
   },
 };
 </script>
@@ -174,7 +178,7 @@ export default {
   display: flex;
   flex-wrap: nowrap;
   justify-content: flex-start;
-} 
+}
 
 .gantt-header .row .row-item {
   box-sizing: border-box;
