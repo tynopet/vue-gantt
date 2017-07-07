@@ -1,107 +1,149 @@
 <template>
-  <div class="gantt">
-    <div class="left-panel">
-      <div class="row spacer">
-        <div class="legend" :title="legendHelp">Легенда (?)</div>
-        <div class="row fn-wide" v-for="(row, index) in rows" :class="`row${index}`" :key="index">
-          <span class="fn-label">
-            <span class="task-name">{{row.name}}</span>
-            <span class="task-link">
-              <a :href="row.link"></a>...</span>
-          </span>
-        </div>
+  <div class="gantt column">
+    <div class="row">
+      <gantt-legend :rows="rows" :legendHelp="legendHelp" ref="legend"></gantt-legend>
+      <div class="column" @wheel="wheelHandler">
+        <gantt-header :rows="header"></gantt-header>
+        <gantt-body :tasks="body"></gantt-body>
       </div>
     </div>
-    <right-panel :startDate="startDate" :endDate="endDate" :values="values"></right-panel>
+    <gantt-footer
+      :scales="scales"
+      :startDate="min"
+      :endDate="max"
+      :step="msInCell"
+      :period="startOfPeriod"
+      @scale-change="scaleChangeHandler"
+      @period-change="periodChangeHandler"
+    ></gantt-footer>
   </div>
 </template>
 
 <script>
-import parse from 'date-fns/parse';
-import min from 'date-fns/min';
-import max from 'date-fns/max';
-import RightPanel from './RightPanel';
+import dateFns from 'date-fns';
+import {
+  calcBody,
+  calcHeader,
+  calcViewport,
+  createOptions,
+  getMsInScale,
+  intervals,
+  transformInputvalues,
+} from '@/hellpers';
+import GanttLegend from './GanttLegend';
+import GanttHeader from './GanttHeader';
+import GanttBody from './GanttBody';
+import GanttFooter from './GanttFooter';
 
-const transformInputvalues = rows => rows.reduce((acc, row) => {
-  const dates = row.values.reduce((r, { from, to }) => ({
-    startDate: r.from ? min(r.from, parse(from)) : parse(from),
-    endDate: r.to ? max(r.to, parse(to)) : parse(to),
-  }), {});
-  return {
-    startDate: acc.startDate ? min(acc.startDate, dates.startDate) : dates.startDate,
-    endDate: acc.endDate ? max(acc.endDate, dates.endDate) : dates.endDate,
-    values: [...acc.values, row.values],
-  };
-}, { values: [] });
+const defaultOptions = {
+  cellWidth: 24,
+  scales: [
+    { scale: 'days', steps: [1] },
+    { scale: 'hours', steps: [12, 8, 6, 3, 1] },
+    { scale: 'minutes', steps: [30, 15, 5, 1] },
+  ],
+};
 
 export default {
   components: {
-    RightPanel,
+    GanttLegend,
+    GanttHeader,
+    GanttBody,
+    GanttFooter,
   },
   props: {
-    rows: {
-      type: Array,
-      required: true,
-    },
-    legendHelp: {
-      type: String,
+    data: {
+      type: Object,
       required: true,
     },
   },
   created() {
-    const { startDate, endDate, values } = transformInputvalues(this.rows);
+    const { rows, legendHelp } = this.data;
+    const { startDate, endDate, values } = transformInputvalues(rows);
+    this.legendHelp = legendHelp;
+    this.rows = rows.map(({ link, name }) => ({ link, name }));
     this.startDate = startDate;
     this.endDate = endDate;
+    this.startOfPeriod = this.min;
     this.values = values.map(value => value.sort((a, b) => a.from - b.from));
+  },
+  mounted() {
+    this.cellsCount = (this.$el.clientWidth - this.$refs.legend.$el.clientWidth)
+      / defaultOptions.cellWidth;
   },
   data() {
     return {
       startDate: null,
       endDate: null,
+      startOfPeriod: null,
+      cellsCount: 0,
+      legendHelp: '',
+      scales: createOptions(defaultOptions.scales),
+      scale: defaultOptions.scales[0].scale,
+      step: defaultOptions.scales[0].steps[0],
       values: [],
     };
+  },
+  computed: {
+    body() {
+      return calcBody(this.viewport, this.values, this.msInCell, defaultOptions.cellWidth);
+    },
+    header() {
+      return calcHeader(this.viewport, this.scale, this.step, defaultOptions.cellWidth);
+    },
+    max() {
+      const method = `endOf${intervals[this.scale]}`;
+      return dateFns.getTime(dateFns[method](this.endDate));
+    },
+    min() {
+      const method = `startOf${intervals[this.scale]}`;
+      return dateFns.getTime(dateFns[method](this.startDate));
+    },
+    msInCell() {
+      return getMsInScale(this.scale) * this.step;
+    },
+    viewport() {
+      return calcViewport(this.startOfPeriod, this.scale, this.step, this.cellsCount);
+    },
+  },
+  methods: {
+    scaleChangeHandler({ scale, step }) {
+      if (this.scale !== scale) this.scale = scale;
+      if (this.step !== step) this.step = step;
+    },
+    periodChangeHandler(value) {
+      this.startOfPeriod = parseInt(value, 10);
+    },
+    wheelHandler(e) {
+      const newStartOfPeriod = e.deltaY > 0
+        ? this.startOfPeriod + this.msInCell
+        : this.startOfPeriod - this.msInCell;
+      if (e.deltaY > 0) {
+        if (newStartOfPeriod < this.max) {
+          this.startOfPeriod = newStartOfPeriod;
+        } else {
+          this.startOfPeriod = this.max;
+        }
+      } else if (e.deltaY < 0) {
+        if (newStartOfPeriod > this.min) {
+          this.startOfPeriod = newStartOfPeriod;
+        } else {
+          this.startOfPeriod = this.min;
+        }
+      }
+    },
   },
 };
 </script>
 
-<style>
-.gantt {
-  width: 100%;
-  height: 300px;
+<style scoped>
+.column {
+  display: flex;
+  flex-direction: column;
+}
+
+.row {
   display: flex;
 }
 
-.gantt .row {
-  line-height: 24px;
-  box-sizing: border-box;
-  cursor: pointer;
-  height: 24px;
-  margin: 0;
-}
-
-.gantt .left-panel {
-  flex-shrink: 0;
-  width: 225px;
-  height: calc(100% + 100px);
-  overflow: hidden;
-  border-right: 1px solid #DDD;
-  position: relative;
-  z-index: 20;
-}
-
-.gantt .left-panel .spacer {
-  height: 72px;
-  width: 100%;
-  background-color: #f6f6f6;
-}
-
-.gantt .left-panel .legend {
-  width: 100%;
-  height: 100%;
-  text-align: center;
-}
-
-.gantt .left-panel .fn-wide {
-  width: 100%;
-}
 </style>
