@@ -3,16 +3,18 @@ import min from 'date-fns/min';
 import max from 'date-fns/max';
 import isAfter from 'date-fns/is_after';
 import isBefore from 'date-fns/is_before';
+import format from 'date-fns/format';
 import memoize from 'lodash/memoize';
 import dateFns from 'date-fns';
+import ruLocale from 'date-fns/locale/ru';
 
 export const createOptions = scales => scales.reduce((acc, { scale, steps }) =>
   acc.concat(steps.map(step => `${scale} ${step}`)), []);
 
 export const transformInputvalues = rows => rows.reduce((acc, row) => {
   const dates = row.values.reduce((r, { from, to }) => ({
-    startDate: r.from ? min(r.from, parse(from)) : parse(from),
-    endDate: r.to ? max(r.to, parse(to)) : parse(to),
+    startDate: r.startDate ? min(r.startDate, parse(from)) : parse(from),
+    endDate: r.endDate ? max(r.endDate, parse(to)) : parse(to),
   }), {});
   return {
     startDate: acc.startDate ? min(acc.startDate, dates.startDate) : dates.startDate,
@@ -50,7 +52,7 @@ export const intervals = {
   minutes: 'Hour',
 };
 
-const capitalize = str => str.charAt(0).toUpperCase() + str.slice(1);
+export const capitalize = str => str.charAt(0).toUpperCase() + str.slice(1);
 
 export const calcViewport = (start, scale, step, cellsCount) => {
   const method = `add${capitalize(scale)}`;
@@ -95,105 +97,117 @@ const getMinutesInHour = memoize((start, end, step) => {
   return (60 - dateFns.getMinutes(start)) / step;
 });
 
-const switchScale = memoize((scale, step) => {
+const switchScale = (scale, step) => {
   switch (scale) {
     case 'days':
       return [
         {
-          method: dateFns.getYear,
+          method: date => format(date, 'YYYY', { locale: ruLocale }),
           addType: dateFns.addYears,
           start: dateFns.startOfYear,
           add: 1,
           factor: 1,
+          scale: 'days',
           get: (start, end) => dateFns.differenceInDays(end, start) + 1,
         },
         {
-          method: dateFns.getMonth,
+          method: date => format(date, 'MMM', { locale: ruLocale }),
           addType: dateFns.addMonths,
           start: dateFns.startOfMonth,
           add: 1,
           factor: 1,
+          scale: 'days',
           get: getDaysInMonth,
         },
         {
-          method: dateFns.getDate,
+          method: date => format(date, 'D', { locale: ruLocale }),
           addType: dateFns.addDays,
           start: dateFns.startOfDay,
-          add: step,
+          add: parseInt(step, 10),
           factor: 1,
+          scale: 'hours',
           get: () => 1,
         },
       ];
     case 'hours':
       return [
         {
-          method: dateFns.getMonth,
+          method: date => format(date, 'MMM', { locale: ruLocale }),
           addType: dateFns.addMonths,
           start: dateFns.startOfMonth,
           add: 1,
           factor: 24 / step,
+          scale: 'days',
           get: getDaysInMonth,
         },
         {
-          method: dateFns.getDate,
+          method: date => format(date, 'D', { locale: ruLocale }),
           addType: dateFns.addDays,
           start: dateFns.startOfDay,
           add: 1,
           factor: 1,
+          scale: 'hours',
           get: getHoursInDay,
         },
         {
-          method: dateFns.getHours,
+          method: date => format(date, 'H', { locale: ruLocale }),
           addType: dateFns.addHours,
           start: dateFns.startOfHour,
-          add: step,
+          add: parseInt(step, 10),
           factor: 1,
+          scale: 'minutes',
           get: () => 1,
         },
       ];
     case 'minutes':
       return [
         {
-          method: dateFns.getDate,
+          method: date => format(date, 'D', { locale: ruLocale }),
           addType: dateFns.addDays,
           start: dateFns.startOfDay,
           add: 1,
           factor: 60,
+          scale: 'hours',
           get: getHoursInDay,
         },
         {
-          method: dateFns.getHours,
+          method: date => format(date, 'H', { locale: ruLocale }),
           addType: dateFns.addHours,
           start: dateFns.startOfHour,
           add: 1,
           factor: 1,
+          scale: 'minutes',
           get: getMinutesInHour,
         },
         {
-          method: dateFns.getMinutes,
+          method: date => format(date, 'm', { locale: ruLocale }),
           addType: dateFns.addMinutes,
           start: dateFns.startOfMinute,
-          add: step,
+          add: parseInt(step, 10),
           factor: 1,
+          scale: 'minutes',
           get: () => 1,
         },
       ];
     default:
       return new Error('Invalid format');
   }
-});
+};
 
-export const calcHeader = memoize(({ startDate, endDate }, scale, step, cellWidth) =>
-  switchScale(scale, step).map((sc) => {
+export const calcHeader = memoize(({ startDate, endDate }, scale, step, cellWidth) => {
+  console.log(scale, step);
+  return switchScale(scale, step).map((sc) => {
     const tmp = [];
     for (let date = new Date(dateFns.getTime(startDate));
       dateFns.isBefore(date, endDate);
       date = sc.start(sc.addType(date, sc.add))) {
       tmp.push({
+        scale: sc.scale,
+        date: dateFns.getTime(date),
         label: sc.method(date),
         width: cellWidth * sc.get(date, endDate, step) * sc.factor,
       });
     }
-    // console.log(tmp);
     return tmp;
-  }));
+  });
+});

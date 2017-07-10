@@ -2,20 +2,12 @@
   <div class="gantt column">
     <div class="row">
       <gantt-legend :rows="rows" :legendHelp="legendHelp" ref="legend"></gantt-legend>
-      <div class="column" @wheel="wheelHandler">
-        <gantt-header :rows="header"></gantt-header>
+      <div class="column" @wheel="handleWheel">
+        <gantt-header :rows="header" @header-click="handleHeaderClick"></gantt-header>
         <gantt-body :tasks="body"></gantt-body>
       </div>
     </div>
-    <gantt-footer
-      :scales="scales"
-      :startDate="min"
-      :endDate="max"
-      :step="msInCell"
-      :period="startOfPeriod"
-      @scale-change="scaleChangeHandler"
-      @period-change="periodChangeHandler"
-    ></gantt-footer>
+    <gantt-footer :scales="scales" :selected="selectedScaleIdx" :startDate="min" :endDate="max" :step="msInCell" :period="startOfPeriod" @scale-change="handleScaleChange" @period-change="handlePeriodChange"></gantt-footer>
   </div>
 </template>
 
@@ -93,7 +85,9 @@ export default {
     },
     max() {
       const method = `endOf${intervals[this.scale]}`;
-      return dateFns.getTime(dateFns[method](this.endDate));
+      const max = dateFns.getTime(dateFns[method](this.endDate))
+        - dateFns.differenceInMilliseconds(this.viewport.endDate, this.viewport.startDate);
+      return max < this.min ? this.min : max;
     },
     min() {
       const method = `startOf${intervals[this.scale]}`;
@@ -105,16 +99,21 @@ export default {
     viewport() {
       return calcViewport(this.startOfPeriod, this.scale, this.step, this.cellsCount);
     },
+    selectedScaleIdx() {
+      return this.scales.findIndex(el => el === `${this.scale} ${this.step}`);
+    },
   },
   methods: {
-    scaleChangeHandler({ scale, step }) {
+    handleScaleChange({ scale, step }) {
       if (this.scale !== scale) this.scale = scale;
       if (this.step !== step) this.step = step;
+      if (this.startOfPeriod < this.min) this.startOfPeriod = this.min;
+      if (this.startOfPeriod > this.max) this.startOfPeriod = this.max;
     },
-    periodChangeHandler(value) {
+    handlePeriodChange(value) {
       this.startOfPeriod = parseInt(value, 10);
     },
-    wheelHandler(e) {
+    handleWheel(e) {
       const newStartOfPeriod = e.deltaY > 0
         ? this.startOfPeriod + this.msInCell
         : this.startOfPeriod - this.msInCell;
@@ -132,6 +131,13 @@ export default {
         }
       }
     },
+    handleHeaderClick({ date, scale }) {
+      this.scale = scale;
+      this.step = 1;
+      if (date > this.max) this.startOfPeriod = this.max;
+      else if (date < this.min) this.startOfPeriod = this.min;
+      else this.startOfPeriod = date;
+    },
   },
 };
 </script>
@@ -145,5 +151,4 @@ export default {
 .row {
   display: flex;
 }
-
 </style>

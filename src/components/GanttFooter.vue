@@ -30,16 +30,15 @@ export default {
       type: Number,
       required: true,
     },
-  },
-  data() {
-    return {
-      selectedScaleIdx: 0,
-    };
+    selected: {
+      type: Number,
+      required: true,
+    },
   },
   computed: {
     scale: {
       get() {
-        return this.scales[this.selectedScaleIdx];
+        return this.scales[this.selected];
       },
       set(value) {
         const [scale, step] = value.split(' ');
