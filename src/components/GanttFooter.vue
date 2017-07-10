@@ -42,7 +42,6 @@ export default {
       },
       set(value) {
         const [scale, step] = value.split(' ');
-        this.selectedScaleIdx = this.scales.indexOf(value);
         this.$emit('scale-change', { scale, step });
       },
     },
@@ -61,6 +60,9 @@ export default {
 <style>
 .footer {
   display: flex;
+  border: 1px solid #DDD;
+  border-top: none;
+  box-sizing: border-box;
 }
 
 .footer .interval {

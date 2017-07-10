@@ -194,9 +194,8 @@ const switchScale = (scale, step) => {
   }
 };
 
-export const calcHeader = memoize(({ startDate, endDate }, scale, step, cellWidth) => {
-  console.log(scale, step);
-  return switchScale(scale, step).map((sc) => {
+export const calcHeader = memoize(({ startDate, endDate }, scale, step, cellWidth) =>
+  switchScale(scale, step).map((sc) => {
     const tmp = [];
     for (let date = new Date(dateFns.getTime(startDate));
       dateFns.isBefore(date, endDate);
@@ -209,5 +208,4 @@ export const calcHeader = memoize(({ startDate, endDate }, scale, step, cellWidt
       });
     }
     return tmp;
-  });
-});
+  }));

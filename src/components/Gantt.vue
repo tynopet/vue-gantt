@@ -87,7 +87,8 @@ export default {
       const method = `endOf${intervals[this.scale]}`;
       const max = dateFns.getTime(dateFns[method](this.endDate))
         - dateFns.differenceInMilliseconds(this.viewport.endDate, this.viewport.startDate);
-      return max < this.min ? this.min : max;
+      const newMax = max < this.min ? this.min : max;
+      return newMax + (this.msInCell - ((newMax - this.min) % this.msInCell));
     },
     min() {
       const method = `startOf${intervals[this.scale]}`;
@@ -146,6 +147,7 @@ export default {
 .column {
   display: flex;
   flex-direction: column;
+  overflow: hidden;
 }
 
 .row {

@@ -1,13 +1,7 @@
 <template>
   <div class="ganttBody">
     <div class="task" v-for="(task, idx) in tasks" :key="idx">
-      <div
-        class="interval"
-        v-for="interval in task"
-        :key="interval"
-        v-show="interval.display"
-        :style="{ 'background-color': interval.color, width: interval.width + 'px', 'margin-left': interval.offset + 'px', display: interval.display }"
-      >
+      <div class="interval" v-for="interval in task" :key="interval" v-show="interval.display" :style="{ 'background-color': interval.color, width: interval.width + 'px', 'margin-left': interval.offset + 'px', display: interval.display }">
         {{interval.desc}}
       </div>
     </div>
@@ -32,6 +26,8 @@ export default {
   flex-wrap: nowrap;
   flex-shrink: 0;
   overflow: hidden;
+  border-bottom: 1px solid #DDD;
+  border-right: 1px solid #DDD;
 }
 
 .ganttBody .task {

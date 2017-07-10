@@ -25,14 +25,16 @@ export default {
   display: flex;
   flex-direction: column;
   width: 100%;
-  height: 72px;
   flex-shrink: 0;
+  border-top: 1px solid #ddd;
+  border-right: 1px solid #ddd;
 }
 
 .gantt-header .row {
   display: flex;
   flex-wrap: nowrap;
   justify-content: flex-start;
+  height: 24px;
 }
 
 .gantt-header .row .row-item {
