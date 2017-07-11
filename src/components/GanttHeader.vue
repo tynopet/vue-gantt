@@ -46,5 +46,8 @@ export default {
   background-color: #f6f6f6;
   border-bottom: 1px solid #ddd;
   border-right: 1px solid #ddd;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: pointer;
 }
 </style>

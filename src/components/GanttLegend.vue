@@ -1,7 +1,7 @@
 <template>
   <div class="legend">
     <div class="title" :title="legendHelp">Легенда (?)</div>
-    <div class="task" v-for="(row, index) in rows" :class="`row${index}`" :key="index">
+    <div class="task" v-for="(row, index) in rows" :key="index" @click="$emit('task-clicked', row.start)">
       <span class="task-name">{{row.name}}</span>
       <span class="task-link">
         <a :href="row.link">...</a>

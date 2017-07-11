@@ -26,8 +26,6 @@ export default {
   flex-wrap: nowrap;
   flex-shrink: 0;
   overflow: hidden;
-  border-bottom: 1px solid #DDD;
-  border-right: 1px solid #DDD;
 }
 
 .ganttBody .task {

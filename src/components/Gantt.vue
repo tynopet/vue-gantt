@@ -1,7 +1,7 @@
 <template>
   <div class="gantt column">
     <div class="row">
-      <gantt-legend :rows="rows" :legendHelp="legendHelp" ref="legend"></gantt-legend>
+      <gantt-legend :rows="tasks" :legendHelp="legendHelp" ref="legend" @task-clicked="handleTaskClicked"></gantt-legend>
       <div class="column" @wheel="handleWheel">
         <gantt-header :rows="header" @header-click="handleHeaderClick"></gantt-header>
         <gantt-body :tasks="body"></gantt-body>
@@ -20,6 +20,7 @@ import {
   createOptions,
   getMsInScale,
   intervals,
+  normalizeDate,
   transformInputvalues,
 } from '@/hellpers';
 import GanttLegend from './GanttLegend';
@@ -53,7 +54,11 @@ export default {
     const { rows, legendHelp } = this.data;
     const { startDate, endDate, values } = transformInputvalues(rows);
     this.legendHelp = legendHelp;
-    this.rows = rows.map(({ link, name }) => ({ link, name }));
+    this.tasks = rows.map(({ link, name, values: v }) => ({
+      link,
+      name,
+      start: Math.min.apply(null, v.map(({ from }) => from)),
+    }));
     this.startDate = startDate;
     this.endDate = endDate;
     this.startOfPeriod = this.min;
@@ -70,6 +75,7 @@ export default {
       startOfPeriod: null,
       cellsCount: 0,
       legendHelp: '',
+      tasks: [],
       scales: createOptions(defaultOptions.scales),
       scale: defaultOptions.scales[0].scale,
       step: defaultOptions.scales[0].steps[0],
@@ -108,6 +114,7 @@ export default {
     handleScaleChange({ scale, step }) {
       if (this.scale !== scale) this.scale = scale;
       if (this.step !== step) this.step = step;
+      this.startOfPeriod = normalizeDate(this.startOfPeriod, this.scale, this.step);
       if (this.startOfPeriod < this.min) this.startOfPeriod = this.min;
       if (this.startOfPeriod > this.max) this.startOfPeriod = this.max;
     },
@@ -138,6 +145,10 @@ export default {
       if (date > this.max) this.startOfPeriod = this.max;
       else if (date < this.min) this.startOfPeriod = this.min;
       else this.startOfPeriod = date;
+    },
+    handleTaskClicked(start) {
+      const startOfPeriod = normalizeDate(start, this.scale, this.step);
+      this.startOfPeriod = startOfPeriod > this.max ? this.max : startOfPeriod;
     },
   },
 };

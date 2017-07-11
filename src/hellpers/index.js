@@ -5,6 +5,7 @@ import isAfter from 'date-fns/is_after';
 import isBefore from 'date-fns/is_before';
 import format from 'date-fns/format';
 import memoize from 'lodash/memoize';
+import capitalize from 'lodash/capitalize';
 import dateFns from 'date-fns';
 import ruLocale from 'date-fns/locale/ru';
 
@@ -51,8 +52,6 @@ export const intervals = {
   hours: 'Day',
   minutes: 'Hour',
 };
-
-export const capitalize = str => str.charAt(0).toUpperCase() + str.slice(1);
 
 export const calcViewport = (start, scale, step, cellsCount) => {
   const method = `add${capitalize(scale)}`;
@@ -102,7 +101,7 @@ const switchScale = (scale, step) => {
     case 'days':
       return [
         {
-          method: date => format(date, 'YYYY', { locale: ruLocale }),
+          method: date => capitalize(format(date, 'YYYY', { locale: ruLocale })),
           addType: dateFns.addYears,
           start: dateFns.startOfYear,
           add: 1,
@@ -111,7 +110,7 @@ const switchScale = (scale, step) => {
           get: (start, end) => dateFns.differenceInDays(end, start) + 1,
         },
         {
-          method: date => format(date, 'MMM', { locale: ruLocale }),
+          method: date => capitalize(format(date, 'MMM', { locale: ruLocale })),
           addType: dateFns.addMonths,
           start: dateFns.startOfMonth,
           add: 1,
@@ -120,7 +119,7 @@ const switchScale = (scale, step) => {
           get: getDaysInMonth,
         },
         {
-          method: date => format(date, 'D', { locale: ruLocale }),
+          method: date => capitalize(format(date, 'D', { locale: ruLocale })),
           addType: dateFns.addDays,
           start: dateFns.startOfDay,
           add: parseInt(step, 10),
@@ -132,7 +131,7 @@ const switchScale = (scale, step) => {
     case 'hours':
       return [
         {
-          method: date => format(date, 'MMM', { locale: ruLocale }),
+          method: date => capitalize(format(date, 'MMM', { locale: ruLocale })),
           addType: dateFns.addMonths,
           start: dateFns.startOfMonth,
           add: 1,
@@ -141,7 +140,7 @@ const switchScale = (scale, step) => {
           get: getDaysInMonth,
         },
         {
-          method: date => format(date, 'D', { locale: ruLocale }),
+          method: date => capitalize(format(date, 'D', { locale: ruLocale })),
           addType: dateFns.addDays,
           start: dateFns.startOfDay,
           add: 1,
@@ -150,7 +149,7 @@ const switchScale = (scale, step) => {
           get: getHoursInDay,
         },
         {
-          method: date => format(date, 'H', { locale: ruLocale }),
+          method: date => capitalize(format(date, 'H', { locale: ruLocale })),
           addType: dateFns.addHours,
           start: dateFns.startOfHour,
           add: parseInt(step, 10),
@@ -162,7 +161,7 @@ const switchScale = (scale, step) => {
     case 'minutes':
       return [
         {
-          method: date => format(date, 'D', { locale: ruLocale }),
+          method: date => capitalize(format(date, 'D', { locale: ruLocale })),
           addType: dateFns.addDays,
           start: dateFns.startOfDay,
           add: 1,
@@ -171,7 +170,7 @@ const switchScale = (scale, step) => {
           get: getHoursInDay,
         },
         {
-          method: date => format(date, 'H', { locale: ruLocale }),
+          method: date => capitalize(format(date, 'H', { locale: ruLocale })),
           addType: dateFns.addHours,
           start: dateFns.startOfHour,
           add: 1,
@@ -180,7 +179,7 @@ const switchScale = (scale, step) => {
           get: getMinutesInHour,
         },
         {
-          method: date => format(date, 'm', { locale: ruLocale }),
+          method: date => capitalize(format(date, 'm', { locale: ruLocale })),
           addType: dateFns.addMinutes,
           start: dateFns.startOfMinute,
           add: parseInt(step, 10),
@@ -209,3 +208,14 @@ export const calcHeader = memoize(({ startDate, endDate }, scale, step, cellWidt
     }
     return tmp;
   }));
+
+export const normalizeDate = (date, scale, step) => {
+  const method = capitalize(scale.slice(0, -1));
+  const addMethod = scale === 'days' ? 'getDate' : `get${method}s`;
+
+  const startOfPeriod = dateFns.getTime(dateFns[`startOf${method}`](date));
+  const rest = dateFns[addMethod](startOfPeriod) % step;
+  return rest
+    ? dateFns.getTime(dateFns[`add${method}s`](startOfPeriod, -rest))
+    : startOfPeriod;
+};
