@@ -1,7 +1,7 @@
 <template>
   <div class="footer">
-    <input type="range" class="interval" :min="startDate" :max="endDate" :step="step" v-model="range">
-    <select v-model="scale">
+    <input type="range" class="interval" :min="startDate" :max="endDate" :step="step" :value="period" @input="$emit('period-change', $event)">
+    <select :value="scales[selected]" @change="$emit('scale-change', $event)">
       <option v-for="scale in scales" :key="scale">{{ scale }}</option>
     </select>
   </div>
@@ -33,25 +33,6 @@ export default {
     selected: {
       type: Number,
       required: true,
-    },
-  },
-  computed: {
-    scale: {
-      get() {
-        return this.scales[this.selected];
-      },
-      set(value) {
-        const [scale, step] = value.split(' ');
-        this.$emit('scale-change', { scale, step });
-      },
-    },
-    range: {
-      get() {
-        return this.period;
-      },
-      set(value) {
-        this.$emit('period-change', value);
-      },
     },
   },
 };

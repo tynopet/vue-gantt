@@ -1,7 +1,11 @@
-<template>
+ <template>
   <div class="ganttBody">
     <div class="task" v-for="(task, idx) in tasks" :key="idx">
-      <div class="interval" v-for="interval in task" :key="interval" v-show="interval.display" :style="{ 'background-color': interval.color, width: interval.width + 'px', 'margin-left': interval.offset + 'px', display: interval.display }">
+      <div class="interval" v-for="(interval, idx) in task" :key="idx" v-show="interval.display" :style="{
+          'background-color': interval.color,
+          width: interval.width + 'px',
+          'margin-left': interval.offset + 'px',
+        }">
         {{interval.desc}}
       </div>
     </div>

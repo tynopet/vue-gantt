@@ -7,19 +7,19 @@
         <gantt-body :tasks="body"></gantt-body>
       </div>
     </div>
-    <gantt-footer :scales="scales" :selected="selectedScaleIdx" :startDate="min" :endDate="max" :step="msInCell" :period="startOfPeriod" @scale-change="handleScaleChange" @period-change="handlePeriodChange"></gantt-footer>
+    <gantt-footer :scales="scales" :selected="selectedScaleIdx" :startDate="min" :endDate="max" :step="msInCell" :period="viewportStart" @scale-change="handleScaleChange" @period-change="handlePeriodChange"></gantt-footer>
   </div>
 </template>
 
 <script>
-import dateFns from 'date-fns';
 import {
   calcBody,
   calcHeader,
   calcViewport,
   createOptions,
   getMsInScale,
-  intervals,
+  getMinDate,
+  getMaxDate,
   normalizeDate,
   transformInputvalues,
 } from '@/hellpers';
@@ -52,17 +52,13 @@ export default {
   },
   created() {
     const { rows, legendHelp } = this.data;
-    const { startDate, endDate, values } = transformInputvalues(rows);
+    const { startDate, endDate, values, tasks } = transformInputvalues(rows);
     this.legendHelp = legendHelp;
-    this.tasks = rows.map(({ link, name, values: v }) => ({
-      link,
-      name,
-      start: Math.min.apply(null, v.map(({ from }) => from)),
-    }));
     this.startDate = startDate;
     this.endDate = endDate;
-    this.startOfPeriod = this.min;
+    this.viewportStart = this.min;
     this.values = values.map(value => value.sort((a, b) => a.from - b.from));
+    this.tasks = tasks;
   },
   mounted() {
     this.cellsCount = (this.$el.clientWidth - this.$refs.legend.$el.clientWidth)
@@ -72,7 +68,7 @@ export default {
     return {
       startDate: null,
       endDate: null,
-      startOfPeriod: null,
+      viewportStart: null,
       cellsCount: 0,
       legendHelp: '',
       tasks: [],
@@ -90,65 +86,63 @@ export default {
       return calcHeader(this.viewport, this.scale, this.step, defaultOptions.cellWidth);
     },
     max() {
-      const method = `endOf${intervals[this.scale]}`;
-      const max = dateFns.getTime(dateFns[method](this.endDate))
-        - dateFns.differenceInMilliseconds(this.viewport.endDate, this.viewport.startDate);
-      const newMax = max < this.min ? this.min : max;
-      return newMax + (this.msInCell - ((newMax - this.min) % this.msInCell));
+      return getMaxDate(
+        this.endDate, this.scale, this.step, this.min, this.msInCell, this.cellsCount,
+      );
     },
     min() {
-      const method = `startOf${intervals[this.scale]}`;
-      return dateFns.getTime(dateFns[method](this.startDate));
+      return getMinDate(this.startDate, this.scale);
     },
     msInCell() {
       return getMsInScale(this.scale) * this.step;
     },
     viewport() {
-      return calcViewport(this.startOfPeriod, this.scale, this.step, this.cellsCount);
+      return calcViewport(this.viewportStart, this.scale, this.step, this.cellsCount);
     },
     selectedScaleIdx() {
       return this.scales.findIndex(el => el === `${this.scale} ${this.step}`);
     },
   },
   methods: {
-    handleScaleChange({ scale, step }) {
+    handleScaleChange(e) {
+      const [scale, step] = e.target.value.split(' ');
       if (this.scale !== scale) this.scale = scale;
       if (this.step !== step) this.step = step;
-      this.startOfPeriod = normalizeDate(this.startOfPeriod, this.scale, this.step);
-      if (this.startOfPeriod < this.min) this.startOfPeriod = this.min;
-      if (this.startOfPeriod > this.max) this.startOfPeriod = this.max;
+      this.viewportStart = normalizeDate(this.viewportStart, this.scale, this.step);
+      if (this.viewportStart < this.min) this.viewportStart = this.min;
+      if (this.viewportStart > this.max) this.viewportStart = this.max;
     },
-    handlePeriodChange(value) {
-      this.startOfPeriod = parseInt(value, 10);
+    handlePeriodChange(e) {
+      this.viewportStart = parseInt(e.target.value, 10);
     },
     handleWheel(e) {
-      const newStartOfPeriod = e.deltaY > 0
-        ? this.startOfPeriod + this.msInCell
-        : this.startOfPeriod - this.msInCell;
+      const newViewportStart = e.deltaY > 0
+        ? this.viewportStart + this.msInCell
+        : this.viewportStart - this.msInCell;
       if (e.deltaY > 0) {
-        if (newStartOfPeriod < this.max) {
-          this.startOfPeriod = newStartOfPeriod;
+        if (newViewportStart < this.max) {
+          this.viewportStart = newViewportStart;
         } else {
-          this.startOfPeriod = this.max;
+          this.viewportStart = this.max;
         }
       } else if (e.deltaY < 0) {
-        if (newStartOfPeriod > this.min) {
-          this.startOfPeriod = newStartOfPeriod;
+        if (newViewportStart > this.min) {
+          this.viewportStart = newViewportStart;
         } else {
-          this.startOfPeriod = this.min;
+          this.viewportStart = this.min;
         }
       }
     },
     handleHeaderClick({ date, scale }) {
       this.scale = scale;
       this.step = 1;
-      if (date > this.max) this.startOfPeriod = this.max;
-      else if (date < this.min) this.startOfPeriod = this.min;
-      else this.startOfPeriod = date;
+      if (date > this.max) this.viewportStart = this.max;
+      else if (date < this.min) this.viewportStart = this.min;
+      else this.viewportStart = date;
     },
     handleTaskClicked(start) {
-      const startOfPeriod = normalizeDate(start, this.scale, this.step);
-      this.startOfPeriod = startOfPeriod > this.max ? this.max : startOfPeriod;
+      const viewportStart = normalizeDate(start, this.scale, this.step);
+      this.viewportStart = viewportStart > this.max ? this.max : viewportStart;
     },
   },
 };
