@@ -13,6 +13,7 @@ import startOfMinute from 'date-fns/start_of_minute';
 import startOfHour from 'date-fns/start_of_hour';
 import startOfDay from 'date-fns/start_of_day';
 import startOfMonth from 'date-fns/start_of_month';
+import startOfQuarter from 'date-fns/start_of_quarter';
 import startOfYear from 'date-fns/start_of_year';
 import differenceInMilliseconds from 'date-fns/difference_in_milliseconds';
 import getYear from 'date-fns/get_year';
@@ -22,10 +23,14 @@ import getHours from 'date-fns/get_hours';
 import getMinutes from 'date-fns/get_minutes';
 import getSeconds from 'date-fns/get_seconds';
 import getDaysInMonth from 'date-fns/get_days_in_month';
+import isSameYear from 'date-fns/is_same_year';
+import isSameQuarter from 'date-fns/is_same_quarter';
 import isSameMonth from 'date-fns/is_same_month';
 import isSameDay from 'date-fns/is_same_day';
 import isSameHour from 'date-fns/is_same_hour';
+import isSameMinute from 'date-fns/is_same_minute';
 import addYears from 'date-fns/add_years';
+import addQuarters from 'date-fns/add_quarters';
 import addMonths from 'date-fns/add_months';
 import addDays from 'date-fns/add_days';
 import addHours from 'date-fns/add_hours';
@@ -36,6 +41,7 @@ import isAfter from 'date-fns/is_after';
 import isBefore from 'date-fns/is_before';
 import format from 'date-fns/format';
 import ruLocale from 'date-fns/locale/ru';
+import compareAsc from 'date-fns/compare_asc';
 import memoize from 'lodash/memoize';
 import capitalize from 'lodash/capitalize';
 
@@ -76,9 +82,11 @@ const getDateFunctions = {
 };
 
 const intervals = {
+  months: 'years',
   days: 'months',
   hours: 'days',
   minutes: 'hours',
+  seconds: 'minutes',
 };
 
 export const createOptions = scales => scales.reduce((acc, { scale, steps }) =>
@@ -123,12 +131,16 @@ export const getMaxDate = (endDate, scale, step, minDate, msInCell, cellsCount) 
 
 export const getMsInScale = memoize((scale) => {
   switch (scale) {
+    case 'months':
+      return 2678400000;
     case 'days':
       return 86400000;
     case 'hours':
       return 3600000;
     case 'minutes':
       return 60000;
+    case 'seconds':
+      return 1000;
     default:
       return new Error('Invalid format');
   }
@@ -150,7 +162,7 @@ export const calcBody = memoize(({ startDate, endDate }, rows, msInCell, cellWid
         ? startDate
         : from;
       const intervalEnd = (isBefore(from, endDate) && isAfter(to, endDate)) ? endDate : to;
-      const display = !(isAfter(from, endDate) || isBefore(to, startDate));
+      const display = !(compareAsc(from, endDate) >= 0 || compareAsc(to, startDate) <= 0);
       const width = Math.ceil(
         ((intervalEnd - intervalStart) / msInCell) * cellWidth,
       );
@@ -165,6 +177,20 @@ export const calcBody = memoize(({ startDate, endDate }, rows, msInCell, cellWid
   ));
 
 // For header
+const mGetMonthsInYear = memoize((start, end) => {
+  if (isSameYear(start, end)) {
+    return (getMonth(end) - getMonth(start));
+  }
+  return (12 - getMonth(start));
+});
+
+const mGetMonthsInQuarter = memoize((start, end) => {
+  if (isSameQuarter(start, end)) {
+    return (getMonth(end) - getMonth(start));
+  }
+  return (3 - (getMonth(start) % 3));
+});
+
 const mGetDaysInMonth = memoize((start, end) => {
   if (isSameMonth(start, end)) {
     return (getDate(end) - getDate(start)) + 1;
@@ -186,33 +212,67 @@ const mGetMinutesInHour = memoize((start, end, step) => {
   return (60 - getMinutes(start)) / step;
 });
 
+const mGetSecondsInMinute = memoize((start, end, step) => {
+  if (isSameMinute(start, end)) {
+    return ((getSeconds(end) - getSeconds(start)) + 1) / step;
+  }
+  return (60 - getSeconds(start)) / step;
+});
+
 const switchScale = (scale, step) => {
   switch (scale) {
-    case 'days':
+    case 'months':
       return [
         {
           method: date => capitalize(format(date, 'YYYY', { locale: ruLocale })),
-          key: 'years',
           addType: addYears,
           start: startOfYear,
           add: 1,
           factor: 1,
-          scale: 'days',
-          get: (start, end) => differenceInDays(end, start) + 1,
+          scale: 'months',
+          get: mGetMonthsInYear,
         },
         {
-          method: date => capitalize(format(date, 'MMM', { locale: ruLocale })),
-          key: 'months',
+          method: date => capitalize(format(date, 'Q', { locale: ruLocale })),
+          addType: addQuarters,
+          start: startOfQuarter,
+          add: 1,
+          factor: 1,
+          scale: 'months',
+          get: mGetMonthsInQuarter,
+        },
+        {
+          method: date => capitalize(format(date, 'M', { locale: ruLocale })),
           addType: addMonths,
           start: startOfMonth,
           add: 1,
           factor: 1,
           scale: 'days',
+          get: () => 1,
+        },
+      ];
+    case 'days':
+      return [
+        {
+          method: date => capitalize(format(date, 'YYYY', { locale: ruLocale })),
+          addType: addYears,
+          start: startOfYear,
+          add: 1,
+          factor: 1,
+          scale: 'months',
+          get: (start, end) => differenceInDays(end, start) + 1,
+        },
+        {
+          method: date => capitalize(format(date, 'MMM', { locale: ruLocale })),
+          addType: addMonths,
+          start: startOfMonth,
+          add: 1,
+          factor: 1,
+          scale: 'months',
           get: mGetDaysInMonth,
         },
         {
           method: date => capitalize(format(date, 'D', { locale: ruLocale })),
-          key: 'days',
           addType: addDays,
           start: startOfDay,
           add: parseInt(step, 10),
@@ -225,7 +285,6 @@ const switchScale = (scale, step) => {
       return [
         {
           method: date => capitalize(format(date, 'MMM', { locale: ruLocale })),
-          key: 'months',
           addType: addMonths,
           start: startOfMonth,
           add: 1,
@@ -235,7 +294,6 @@ const switchScale = (scale, step) => {
         },
         {
           method: date => capitalize(format(date, 'D', { locale: ruLocale })),
-          key: 'days',
           addType: addDays,
           start: startOfDay,
           add: 1,
@@ -245,7 +303,6 @@ const switchScale = (scale, step) => {
         },
         {
           method: date => capitalize(format(date, 'H', { locale: ruLocale })),
-          key: 'hours',
           addType: addHours,
           start: startOfHour,
           add: parseInt(step, 10),
@@ -258,7 +315,6 @@ const switchScale = (scale, step) => {
       return [
         {
           method: date => capitalize(format(date, 'D', { locale: ruLocale })),
-          key: 'days',
           addType: addDays,
           start: startOfDay,
           add: 1,
@@ -268,7 +324,6 @@ const switchScale = (scale, step) => {
         },
         {
           method: date => capitalize(format(date, 'H', { locale: ruLocale })),
-          key: 'hours',
           addType: addHours,
           start: startOfHour,
           add: 1,
@@ -278,12 +333,41 @@ const switchScale = (scale, step) => {
         },
         {
           method: date => capitalize(format(date, 'm', { locale: ruLocale })),
-          key: 'months',
           addType: addMinutes,
           start: startOfMinute,
           add: parseInt(step, 10),
           factor: 1,
+          scale: 'seconds',
+          get: () => 1,
+        },
+      ];
+    case 'seconds':
+      return [
+        {
+          method: date => capitalize(format(date, 'H', { locale: ruLocale })),
+          addType: addHours,
+          start: startOfHour,
+          add: 1,
+          factor: 60,
           scale: 'minutes',
+          get: mGetMinutesInHour,
+        },
+        {
+          method: date => capitalize(format(date, 'm', { locale: ruLocale })),
+          addType: addMinutes,
+          start: startOfMinute,
+          add: 1,
+          factor: 1,
+          scale: 'seconds',
+          get: mGetSecondsInMinute,
+        },
+        {
+          method: date => capitalize(format(date, 's', { locale: ruLocale })),
+          addType: addSeconds,
+          start: startOfSecond,
+          add: parseInt(step, 10),
+          factor: 1,
+          scale: 'seconds',
           get: () => 1,
         },
       ];

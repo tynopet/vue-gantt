@@ -1,7 +1,7 @@
 <template>
   <div class="gantt-header">
     <div class="row" v-for="(row, idx) in rows" :key="idx">
-      <div class="row-item" @click="$emit('header-click', obj)" v-for="(obj, idx) in row" :key="idx" :style="{ width: obj.width + 'px' }">
+      <div class="row-item" :title="obj.label" @click="$emit('header-click', obj)" v-for="(obj, idx) in row" :key="idx" :style="{ width: obj.width + 'px' }">
         {{ obj.label }}
       </div>
     </div>

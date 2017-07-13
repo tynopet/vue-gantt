@@ -1,12 +1,12 @@
  <template>
   <div class="ganttBody">
     <div class="task" v-for="(task, idx) in tasks" :key="idx">
-      <div class="interval" v-for="(interval, idx) in task" :key="idx" v-show="interval.display" :style="{
-          'background-color': interval.color,
-          width: interval.width + 'px',
-          'margin-left': interval.offset + 'px',
-        }">
-        {{interval.desc}}
+      <div class="interval" v-for="({ display, desc, color, width, offset }, idx) in task" :key="idx" :title="desc" v-show="display" :style="{
+                          'background-color': color,
+                          width: width + 'px',
+                          'margin-left': offset + 'px',
+                        }">
+        {{desc}}
       </div>
     </div>
   </div>
@@ -30,11 +30,14 @@ export default {
   flex-wrap: nowrap;
   flex-shrink: 0;
   overflow: hidden;
+  background-image: url('/static/grid.png');
+  background-repeat: repeat;
 }
 
 .ganttBody .task {
   display: flex;
   flex-wrap: nowrap;
+  align-items: center;
   line-height: 24px;
   height: 24px;
   flex-shrink: 0;
@@ -47,5 +50,7 @@ export default {
   box-sizing: border-box;
   overflow: hidden;
   text-overflow: ellipsis;
+  min-width: 12px;
+  height: 20px;
 }
 </style>

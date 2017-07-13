@@ -31,9 +31,11 @@ import GanttFooter from './GanttFooter';
 const defaultOptions = {
   cellWidth: 24,
   scales: [
+    { scale: 'months', steps: [1] },
     { scale: 'days', steps: [1] },
     { scale: 'hours', steps: [12, 8, 6, 3, 1] },
     { scale: 'minutes', steps: [30, 15, 5, 1] },
+    { scale: 'seconds', steps: [30, 15, 5, 1] },
   ],
 };
 
