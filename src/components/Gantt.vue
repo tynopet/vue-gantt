@@ -15,6 +15,7 @@
 import {
   calcBody,
   calcHeader,
+  calcMaxScale,
   calcViewport,
   createOptions,
   getMsInScale,
@@ -58,19 +59,24 @@ export default {
     this.legendHelp = legendHelp;
     this.startDate = startDate;
     this.endDate = endDate;
-    this.viewportStart = this.min;
     this.values = values.map(value => value.sort((a, b) => a.from - b.from));
     this.tasks = tasks;
   },
   mounted() {
-    this.cellsCount = (this.$el.clientWidth - this.$refs.legend.$el.clientWidth)
-      / defaultOptions.cellWidth;
+    this.cellsCount = Math.ceil((this.$el.clientWidth - this.$refs.legend.$el.clientWidth)
+      / defaultOptions.cellWidth);
+    const maxScaleIdx = calcMaxScale(this.startDate, this.endDate, this.cellsCount, this.scales);
+    const [scale, step] = this.scales[maxScaleIdx].split(' ');
+    this.scale = scale;
+    this.step = step;
+    this.scales = this.scales.filter((_, idx) => idx >= maxScaleIdx);
+    this.viewportStart = this.min;
   },
   data() {
     return {
       startDate: null,
       endDate: null,
-      viewportStart: null,
+      viewportStart: 0,
       cellsCount: 0,
       legendHelp: '',
       tasks: [],

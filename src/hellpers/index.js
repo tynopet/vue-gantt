@@ -399,3 +399,12 @@ export const normalizeDate = (date, scale, step) => {
     ? getTime(addDateFunctions[scale](startOfPeriod, -rest))
     : startOfPeriod;
 };
+
+export const calcMaxScale = (start, end, cellsCount, scales) => {
+  const realDiff = getTime(end) - getTime(start);
+  return scales.reduceRight((acc, s, idx) => {
+    const [scale, step] = s.split(' ');
+    const { startDate, endDate } = calcViewport(getMinDate(start, scale), scale, step, cellsCount);
+    return (getTime(endDate) - getTime(startDate) > realDiff) && idx > acc ? idx : acc;
+  }, 0);
+};
