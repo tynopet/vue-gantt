@@ -19,10 +19,12 @@ import differenceInMilliseconds from 'date-fns/difference_in_milliseconds';
 import getYear from 'date-fns/get_year';
 import getMonth from 'date-fns/get_month';
 import getDate from 'date-fns/get_date';
+import getdayOfYear from 'date-fns/get_day_of_year';
 import getHours from 'date-fns/get_hours';
 import getMinutes from 'date-fns/get_minutes';
 import getSeconds from 'date-fns/get_seconds';
 import getDaysInMonth from 'date-fns/get_days_in_month';
+import getDaysInYear from 'date-fns/get_days_in_year';
 import isSameYear from 'date-fns/is_same_year';
 import isSameQuarter from 'date-fns/is_same_quarter';
 import isSameMonth from 'date-fns/is_same_month';
@@ -163,12 +165,14 @@ export const calcBody = memoize(({ startDate, endDate }, rows, msInCell, cellWid
         : from;
       const intervalEnd = (isBefore(from, endDate) && isAfter(to, endDate)) ? endDate : to;
       const display = !(compareAsc(from, endDate) >= 0 || compareAsc(to, startDate) <= 0);
+      // hardcode msInCell for month scale
+      const msInCellWithTolerance = msInCell === 2678400000 ? (365 / 12) * 8.64e7 : msInCell;
       const width = Math.ceil(
-        ((intervalEnd - intervalStart) / msInCell) * cellWidth,
+        ((intervalEnd - intervalStart) / msInCellWithTolerance) * cellWidth,
       );
       return {
         width,
-        offset,
+        offset: (width < 8 && offset > 0) ? offset - (8 - width) : offset,
         desc,
         color,
         display,
@@ -191,25 +195,32 @@ const mGetMonthsInQuarter = memoize((start, end) => {
   return (3 - (getMonth(start) % 3));
 });
 
+const mGetDaysInYear = memoize((start, end) => {
+  if (isSameYear(start, end)) {
+    return differenceInDays(end, start) + 1;
+  }
+  return (getDaysInYear(start) - getdayOfYear(start)) + 1;
+});
+
 const mGetDaysInMonth = memoize((start, end) => {
   if (isSameMonth(start, end)) {
     return (getDate(end) - getDate(start)) + 1;
   }
-  return (getDaysInMonth(start) - getDate(start)) + 1;
+  return (getDaysInMonth(start) - getDate(start) - (getHours(start) / 24)) + 1;
 });
 
 const mGetHoursInDay = memoize((start, end, step) => {
   if (isSameDay(start, end)) {
     return ((getHours(end) - getHours(start)) + 1) / step;
   }
-  return (24 - getHours(start)) / step;
+  return (24 - getHours(start) - (getMinutes(start) / 60)) / step;
 });
 
 const mGetMinutesInHour = memoize((start, end, step) => {
   if (isSameHour(start, end)) {
     return ((getMinutes(end) - getMinutes(start)) + 1) / step;
   }
-  return (60 - getMinutes(start)) / step;
+  return (60 - getMinutes(start) - (getSeconds(start) / 60)) / step;
 });
 
 const mGetSecondsInMinute = memoize((start, end, step) => {
@@ -260,7 +271,7 @@ const switchScale = (scale, step) => {
           add: 1,
           factor: 1,
           scale: 'months',
-          get: (start, end) => differenceInDays(end, start) + 1,
+          get: mGetDaysInYear,
         },
         {
           method: date => capitalize(format(date, 'MMM', { locale: ruLocale })),
@@ -386,6 +397,7 @@ export const calcHeader = memoize(({ startDate, endDate }, scale, step, cellWidt
         scale: sc.scale,
         date: getTime(date),
         label: sc.method(date),
+        title: format(date, 'DD-MM-YYYY HH:mm:ss'),
         width: cellWidth * sc.get(date, endDate, step) * sc.factor,
       });
     }

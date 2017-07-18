@@ -1,8 +1,8 @@
 <template>
-  <div class="gantt column">
-    <div class="row">
+  <div class="vue-gantt gantt-column">
+    <div class="gantt-row">
       <gantt-legend :rows="tasks" :legendHelp="legendHelp" ref="legend" @task-clicked="handleTaskClicked"></gantt-legend>
-      <div class="column" @wheel="handleWheel">
+      <div class="gantt-column" @wheel.prevent="handleWheel" :style="{ width: cellsCount * 24 }">
         <gantt-header :rows="header" @header-click="handleHeaderClick"></gantt-header>
         <gantt-body :tasks="body"></gantt-body>
       </div>
@@ -157,13 +157,20 @@ export default {
 </script>
 
 <style scoped>
-.column {
+.vue-gantt {
+  font-size: 12px;
+}
+
+.vue-gantt.gantt-column,
+.vue-gantt .gantt-column {
   display: flex;
+  flex: 1 1 auto;
   flex-direction: column;
   overflow: hidden;
 }
 
-.row {
+.vue-gantt .gantt-row {
   display: flex;
+  flex-wrap: nowrap;
 }
 </style>

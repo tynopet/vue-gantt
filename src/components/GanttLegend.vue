@@ -1,5 +1,5 @@
 <template>
-  <div class="legend">
+  <div class="vue-gantt-legend">
     <div class="title" :title="legendHelp">Легенда (?)</div>
     <div class="task" v-for="(row, index) in rows" :key="index" @click="$emit('task-clicked', row.start)">
       <span class="task-name">{{row.name}}</span>
@@ -27,7 +27,7 @@ export default {
 </script>
 
 <style scoped>
-.legend {
+.vue-gantt-legend {
   flex-shrink: 0;
   width: 225px;
   overflow: hidden;
@@ -38,7 +38,7 @@ export default {
   z-index: 20;
 }
 
-.legend .title {
+.vue-gantt-legend .title {
   display: flex;
   justify-content: center;
   align-items: center;
@@ -47,7 +47,7 @@ export default {
   border-bottom: 1px solid #DDD;
 }
 
-.task {
+.vue-gantt-legend .task {
   line-height: 24px;
   box-sizing: border-box;
   border-bottom: 1px solid #DDD;

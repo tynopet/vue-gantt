@@ -1,11 +1,11 @@
  <template>
-  <div class="ganttBody">
+  <div class="vue-gantt-body">
     <div class="task" v-for="(task, idx) in tasks" :key="idx">
       <div class="interval" v-for="({ display, desc, color, width, offset }, idx) in task" :key="idx" :title="desc" v-show="display" :style="{
-                          'background-color': color,
-                          width: width + 'px',
-                          'margin-left': offset + 'px',
-                        }">
+                                    'background-color': color,
+                                    width: width + 'px',
+                                    'margin-left': offset + 'px',
+                                  }">
         {{desc}}
       </div>
     </div>
@@ -24,17 +24,17 @@ export default {
 </script>
 
 <style>
-.ganttBody {
+.vue-gantt-body {
   display: flex;
   flex-direction: column;
   flex-wrap: nowrap;
   flex-shrink: 0;
   overflow: hidden;
-  background-image: url('/static/grid.png');
+  background-image: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAMAAADXqc3KAAAABlBMVEXl5eX////ixexJAAAAFUlEQVQoz2NgxA4YGEYlRiUIS+ACAIk/AhIVOVcSAAAAAElFTkSuQmCC');
   background-repeat: repeat;
 }
 
-.ganttBody .task {
+.vue-gantt-body .task {
   display: flex;
   flex-wrap: nowrap;
   align-items: center;
@@ -44,13 +44,13 @@ export default {
   overflow: hidden;
 }
 
-.ganttBody .task .interval {
+.vue-gantt-body .task .interval {
   display: flex;
   justify-content: center;
   box-sizing: border-box;
   overflow: hidden;
   text-overflow: ellipsis;
-  min-width: 12px;
+  min-width: 8px;
   height: 20px;
 }
 </style>
