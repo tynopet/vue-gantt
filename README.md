@@ -1,4 +1,4 @@
-# gantt
+# vue-gantt
 
 > Gantt diagramm for onyma CRM
 
