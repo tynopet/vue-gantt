@@ -142,11 +142,13 @@ export default {
       }
     },
     handleHeaderClick({ date, scale }) {
-      this.scale = scale;
-      this.step = 1;
-      if (date > this.max) this.viewportStart = this.max;
-      else if (date < this.min) this.viewportStart = this.min;
-      else this.viewportStart = date;
+      if (this.scales.includes(`${scale} 1`)) {
+        this.scale = scale;
+        this.step = 1;
+        if (date > this.max) this.viewportStart = this.max;
+        else if (date < this.min) this.viewportStart = this.min;
+        else this.viewportStart = date;
+      }
     },
     handleTaskClicked(start) {
       const viewportStart = normalizeDate(start, this.scale, this.step);
