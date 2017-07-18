@@ -101,6 +101,8 @@ export const transformInputvalues = rows => rows.reduce((acc, { link, name, valu
   }), {});
   const task = {
     link,
+    from: format(dates.startDate, 'DD-MM-YYYY HH:mm:ss'),
+    to: format(dates.endDate, 'DD-MM-YYYY HH:mm:ss'),
     name,
     start: getTime(dates.startDate),
   };
@@ -176,6 +178,8 @@ export const calcBody = memoize(({ startDate, endDate }, rows, msInCell, cellWid
         desc,
         color,
         display,
+        from: format(from, 'DD-MM-YYYY HH:mm:ss'),
+        to: format(to, 'DD-MM-YYYY HH:mm:ss'),
       };
     }),
   ));
