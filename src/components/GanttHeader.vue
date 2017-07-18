@@ -1,7 +1,7 @@
 <template>
-  <div class="gantt-header">
-    <div class="row" v-for="(row, idx) in rows" :key="idx">
-      <div class="row-item" :title="obj.label" @click="$emit('header-click', obj)" v-for="(obj, idx) in row" :key="idx" :style="{ width: obj.width + 'px' }">
+  <div class="vue-gantt-header">
+    <div class="gantt-row" v-for="(row, idx) in rows" :key="idx">
+      <div class="row-item" :title="obj.title" @click="$emit('header-click', obj)" v-for="(obj, idx) in row" :key="idx" :style="{ width: obj.width + 'px' }">
         {{ obj.label }}
       </div>
     </div>
@@ -20,7 +20,7 @@ export default {
 </script>
 
 <style>
-.gantt-header {
+.vue-gantt-header {
   overflow: hidden;
   display: flex;
   flex-direction: column;
@@ -30,14 +30,14 @@ export default {
   border-right: 1px solid #ddd;
 }
 
-.gantt-header .row {
+.vue-gantt-header .gantt-row {
   display: flex;
   flex-wrap: nowrap;
   justify-content: flex-start;
   height: 24px;
 }
 
-.gantt-header .row .row-item {
+.vue-gantt-header .gantt-row .row-item {
   box-sizing: border-box;
   flex-shrink: 0;
   display: flex;

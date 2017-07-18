@@ -1,5 +1,5 @@
 <template>
-  <div class="footer">
+  <div class="vue-gantt-footer">
     <input type="range" class="interval" :min="startDate" :max="endDate" :step="step" :value="period" @input="$emit('period-change', $event)">
     <select :value="scales[selected]" @change="$emit('scale-change', $event)">
       <option v-for="scale in scales" :key="scale">{{ scale }}</option>
@@ -39,14 +39,14 @@ export default {
 </script>
 
 <style>
-.footer {
+.vue-gantt-footer {
   display: flex;
   border: 1px solid #DDD;
   border-top: none;
   box-sizing: border-box;
 }
 
-.footer .interval {
+.vue-gantt-footer .interval {
   flex-grow: 1;
 }
 </style>
