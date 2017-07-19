@@ -159,16 +159,16 @@ export const calcViewport = (start, scale, step, cellsCount) => {
 export const calcBody = memoize(({ startDate, endDate }, rows, msInCell, cellWidth) =>
   rows.map(row =>
     row.map(({ from, to, desc, color }, idx) => {
+      // hardcode msInCell for month scale
+      const msInCellWithTolerance = msInCell === 2678400000 ? (365 / 12) * 8.64e7 : msInCell;
       const offset = idx === 0 && (isAfter(from, startDate) && isBefore(from, endDate))
-        ? Math.ceil(((from - startDate) / msInCell) * cellWidth)
+        ? Math.ceil(((from - startDate) / msInCellWithTolerance) * cellWidth)
         : 0;
       const intervalStart = (isBefore(from, startDate) && isAfter(to, startDate))
         ? startDate
         : from;
       const intervalEnd = (isBefore(from, endDate) && isAfter(to, endDate)) ? endDate : to;
       const display = !(compareAsc(from, endDate) >= 0 || compareAsc(to, startDate) <= 0);
-      // hardcode msInCell for month scale
-      const msInCellWithTolerance = msInCell === 2678400000 ? (365 / 12) * 8.64e7 : msInCell;
       const width = Math.ceil(
         ((intervalEnd - intervalStart) / msInCellWithTolerance) * cellWidth,
       );
