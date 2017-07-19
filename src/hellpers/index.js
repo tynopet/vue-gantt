@@ -156,7 +156,7 @@ export const calcViewport = (start, scale, step, cellsCount) => {
   return { startDate, endDate };
 };
 
-export const calcBody = memoize(({ startDate, endDate }, rows, msInCell, cellWidth) =>
+export const calcBody = ({ startDate, endDate }, rows, msInCell, cellWidth) =>
   rows.map(row =>
     row.map(({ from, to, desc, color }, idx) => {
       // hardcode msInCell for month scale
@@ -182,7 +182,7 @@ export const calcBody = memoize(({ startDate, endDate }, rows, msInCell, cellWid
         to: format(to, 'DD-MM-YYYY HH:mm:ss'),
       };
     }),
-  ));
+  );
 
 // For header
 const mGetMonthsInYear = memoize((start, end) => {
