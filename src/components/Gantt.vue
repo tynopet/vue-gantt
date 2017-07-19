@@ -53,15 +53,6 @@ export default {
       required: true,
     },
   },
-  created() {
-    const { rows, legendHelp } = this.data;
-    const { startDate, endDate, values, tasks } = transformInputvalues(rows);
-    this.legendHelp = legendHelp;
-    this.startDate = startDate;
-    this.endDate = endDate;
-    this.values = values.map(value => value.sort((a, b) => a.from - b.from));
-    this.tasks = tasks;
-  },
   mounted() {
     this.cellsCount = Math.ceil((this.$el.clientWidth - this.$refs.legend.$el.clientWidth)
       / defaultOptions.cellWidth);
@@ -74,19 +65,33 @@ export default {
   },
   data() {
     return {
-      startDate: null,
-      endDate: null,
       viewportStart: 0,
       cellsCount: 0,
-      legendHelp: '',
-      tasks: [],
       scales: createOptions(defaultOptions.scales),
       scale: defaultOptions.scales[0].scale,
       step: defaultOptions.scales[0].steps[0],
-      values: [],
     };
   },
   computed: {
+    parsedProps() {
+      const { rows } = this.data;
+      return transformInputvalues(rows);
+    },
+    legendHelp() {
+      return this.data.legendHelp;
+    },
+    startDate() {
+      return this.parsedProps.startDate;
+    },
+    endDate() {
+      return this.parsedProps.endDate;
+    },
+    values() {
+      return this.parsedProps.values.map(value => value.sort((a, b) => a.from - b.from));
+    },
+    tasks() {
+      return this.parsedProps.tasks;
+    },
     body() {
       return calcBody(this.viewport, this.values, this.msInCell, defaultOptions.cellWidth);
     },
