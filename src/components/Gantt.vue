@@ -54,8 +54,8 @@ export default {
     },
   },
   mounted() {
-    this.cellsCount = Math.ceil((this.$el.clientWidth - this.$refs.legend.$el.clientWidth)
-      / defaultOptions.cellWidth);
+    window.addEventListener('resize', this.setCellsCount);
+    this.setCellsCount();
     const maxScaleIdx = calcMaxScale(this.startDate, this.endDate, this.cellsCount, this.scales);
     const [scale, step] = this.scales[maxScaleIdx].split(' ');
     this.scale = scale;
@@ -117,6 +117,10 @@ export default {
     },
   },
   methods: {
+    setCellsCount() {
+      this.cellsCount = Math.ceil((this.$el.clientWidth - this.$refs.legend.$el.clientWidth)
+        / defaultOptions.cellWidth);
+    },
     handleScaleChange(e) {
       const [scale, step] = e.target.value.split(' ');
       if (this.scale !== scale) this.scale = scale;
