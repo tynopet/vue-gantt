@@ -208,21 +208,27 @@ const mGetDaysInYear = memoize((start, end) => {
 
 const mGetDaysInMonth = memoize((start, end) => {
   if (isSameMonth(start, end)) {
-    return (getDate(end) - getDate(start)) + 1;
+    const maxDays = (getTime(end) - getTime(start)) / 86400000;
+    const days = (getDate(end) - getDate(start)) + 1;
+    return days > maxDays ? maxDays : days;
   }
   return (getDaysInMonth(start) - getDate(start) - (getHours(start) / 24)) + 1;
 });
 
 const mGetHoursInDay = memoize((start, end, step) => {
   if (isSameDay(start, end)) {
-    return ((getHours(end) - getHours(start)) + 1) / step;
+    const maxHours = (getTime(end) - getTime(start)) / 3600000 / step;
+    const hours = ((getHours(end) - getHours(start)) + 1) / step;
+    return hours > maxHours ? maxHours : hours;
   }
   return (24 - getHours(start) - (getMinutes(start) / 60)) / step;
 });
 
 const mGetMinutesInHour = memoize((start, end, step) => {
   if (isSameHour(start, end)) {
-    return ((getMinutes(end) - getMinutes(start)) + 1) / step;
+    const maxMinutes = (getTime(end) - getTime(start)) / 60000 / step;
+    const minutes = ((getMinutes(end) - getMinutes(start) - (getSeconds(start) / 60)) + 1) / step;
+    return minutes > maxMinutes ? maxMinutes : minutes;
   }
   return (60 - getMinutes(start) - (getSeconds(start) / 60)) / step;
 });
