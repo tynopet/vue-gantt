@@ -1,11 +1,7 @@
  <template>
   <div class="vue-gantt-body">
     <div class="task" v-for="(task, idx) in tasks" :key="idx">
-      <div class="interval" v-for="({ display, desc, color, width, offset, from, to }, idx) in task" :key="idx" v-show="display" :style="{
-        'background-color': color,
-        width: width + 'px',
-        'margin-left': offset + 'px',
-      }" :title="`${desc} From ${from} to ${to}`">
+      <div class="interval" v-for="({ display, desc, color, width, offset, from, to, title }, idx) in task" :key="idx" v-show="display" :style="{'background-color': color,  width: width + 'px', 'margin-left': offset + 'px'}" :title="`${title}, 'From' ${from} 'to' ${to}`">
         {{desc}}
       </div>
     </div>
@@ -45,8 +41,7 @@ export default {
 }
 
 .vue-gantt-body .task .interval {
-  display: flex;
-  justify-content: center;
+  text-align: center;
   box-sizing: border-box;
   overflow: hidden;
   text-overflow: ellipsis;

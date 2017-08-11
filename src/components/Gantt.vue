@@ -1,7 +1,7 @@
 <template>
   <div class="vue-gantt gantt-column">
     <div class="gantt-row">
-      <gantt-legend :rows="tasks" :legendHelp="legendHelp" ref="legend" @task-clicked="handleTaskClicked"></gantt-legend>
+      <gantt-legend :rows="tasks" :legendHelp="legendHelp" ref="legend" @task-click="handleTaskClick"></gantt-legend>
       <div class="gantt-column" @wheel.prevent="handleWheel" :style="{ width: cellsCount * 24 }">
         <gantt-header :rows="header" @header-click="handleHeaderClick"></gantt-header>
         <gantt-body :tasks="body"></gantt-body>
@@ -18,11 +18,13 @@ import {
   calcMaxScale,
   calcViewport,
   createOptions,
+  getEndOfScale,
   getMsInScale,
   getMinDate,
   getMaxDate,
+  getViewportInMilliseconds,
   normalizeDate,
-  transformInputvalues,
+  transformInputValues,
 } from '@/hellpers';
 import GanttLegend from './GanttLegend';
 import GanttHeader from './GanttHeader';
@@ -63,6 +65,9 @@ export default {
     this.scales = this.scales.filter((_, idx) => idx >= maxScaleIdx);
     this.viewportStart = this.min;
   },
+  beforeDestroy() {
+    window.removeEventListener('resize', this.setCellsCount);
+  },
   data() {
     return {
       viewportStart: 0,
@@ -75,7 +80,7 @@ export default {
   computed: {
     parsedProps() {
       const { rows } = this.data;
-      return transformInputvalues(rows);
+      return transformInputValues(rows);
     },
     legendHelp() {
       return this.data.legendHelp;
@@ -100,7 +105,9 @@ export default {
     },
     max() {
       return getMaxDate(
-        this.endDate, this.scale, this.step, this.min, this.msInCell, this.cellsCount,
+        getEndOfScale(this.scale, this.endDate)
+        - getViewportInMilliseconds(this.endDate, this.scale, this.step, this.cellsCount),
+        this.min, this.msInCell,
       );
     },
     min() {
@@ -159,9 +166,9 @@ export default {
         else this.viewportStart = date;
       }
     },
-    handleTaskClicked(start) {
+    handleTaskClick(start) {
       const viewportStart = normalizeDate(start, this.scale, this.step);
-      this.viewportStart = viewportStart > this.max ? this.max : viewportStart;
+      this.viewportStart = Math.min(viewportStart, this.max);
     },
   },
 };

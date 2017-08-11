@@ -20,9 +20,9 @@
     </h1>
     <div class='clearfix'>
       <div class='fl pad1y space-right2'>
-        <span class="strong">42.86% </span>
+        <span class="strong">100% </span>
         <span class="quiet">Statements</span>
-        <span class='fraction'>3/7</span>
+        <span class='fraction'>0/0</span>
       </div>
       <div class='fl pad1y space-right2'>
         <span class="strong">100% </span>
@@ -35,13 +35,13 @@
         <span class='fraction'>0/0</span>
       </div>
       <div class='fl pad1y space-right2'>
-        <span class="strong">42.86% </span>
+        <span class="strong">100% </span>
         <span class="quiet">Lines</span>
-        <span class='fraction'>3/7</span>
+        <span class='fraction'>0/0</span>
       </div>
     </div>
   </div>
-  <div class='status-line low'></div>
+  <div class='status-line high'></div>
 <pre><table class="coverage">
 <tr><td class="line-count quiet">1
 2
@@ -95,25 +95,7 @@
 50
 51
 52
-53
-54
-55
-56
-57
-58
-59
-60
-61
-62
-63
-64
-65
-66
-67
-68
-69
-70
-71</td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
+53</td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -147,27 +129,9 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">1×</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">1×</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">1×</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -184,10 +148,10 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">&lt;template&gt;
-  &lt;div class="footer"&gt;
-    &lt;input type="range" class="interval" :min="startDate" :max="endDate" :step="step" v-model="range"&gt;
-    &lt;select v-model="scale"&gt;
-      &lt;option v-for="scale in scales" :key="scale"&gt;{{ scale }}&lt;/option&gt;
+  &lt;div class="vue-gantt-footer"&gt;
+    &lt;input type="range" class="scroll" :min="startDate" :max="endDate" :step="step" :value="period" @input="$emit('period-change', $event)"&gt;
+    &lt;select :value="scales[selected]" @change="$emit('scale-change', $event)"&gt;
+      &lt;option v-for="scale in scales" :key="scale" :value="scale"&gt;{{ scale }}&lt;/option&gt;
     &lt;/select&gt;
   &lt;/div&gt;
 &lt;/template&gt;
@@ -215,41 +179,23 @@ export default {
       type: Number,
       required: true,
     },
-  },
-  data() {
-    return {
-      selectedScaleIdx: 0,
-    };
-  },
-  computed: {
-    scale: {
-      get() {
-        return this.scales[this.selectedScaleIdx];
-      },
-      set(value) {
-        const [scale, step] = <span class="cstat-no" title="statement not covered" >value.split(' ');</span>
-<span class="cstat-no" title="statement not covered" >        this.selectedScaleIdx = this.scales.indexOf(value);</span>
-<span class="cstat-no" title="statement not covered" >        this.$emit('scale-change', { scale, step });</span>
-      },
-    },
-    range: {
-      get() {
-        return this.period;
-      },
-      set(value) {
-<span class="cstat-no" title="statement not covered" >        this.$emit('period-change', value);</span>
-      },
+    selected: {
+      type: Number,
+      required: true,
     },
   },
 };
 &lt;/script&gt;
 &nbsp;
 &lt;style&gt;
-.footer {
+.vue-gantt-footer {
   display: flex;
+  border: 1px solid #DDD;
+  border-top: none;
+  box-sizing: border-box;
 }
 &nbsp;
-.footer .interval {
+.vue-gantt-footer .scroll {
   flex-grow: 1;
 }
 &lt;/style&gt;
@@ -259,7 +205,7 @@ export default {
 </div><!-- /wrapper -->
 <div class='footer quiet pad2 space-top1 center small'>
   Code coverage
-  generated by <a href="http://istanbul-js.org/" target="_blank">istanbul</a> at Fri Jul 07 2017 19:00:04 GMT+0300 (MSK)
+  generated by <a href="http://istanbul-js.org/" target="_blank">istanbul</a> at Fri Aug 11 2017 11:51:49 GMT+0300 (MSK)
 </div>
 </div>
 <script src="../prettify.js"></script>

@@ -11,7 +11,31 @@ module.exports = function (config) {
     // 1. install corresponding karma launcher
     //    http://karma-runner.github.io/0.13/config/browsers.html
     // 2. add it to the `browsers` array below.
-    browsers: ['PhantomJS'],
+    // browsers: ['ChromeHeadlessLg'],
+    browsers: ['ChromeHeadlessLg', 'ChromiumLg', 'FirefoxLg'],
+    customLaunchers: {
+      ChromeHeadlessLg: {
+        base: 'ChromeHeadless',
+        flags: [
+          '--window-size=1920,1080',
+          '--window-position==0,0'
+        ]
+      },
+      ChromiumLg: {
+        base: 'Chromium',
+        flags: [
+          '--window-size=1920,1080',
+          '--window-position==0,0'
+        ]
+      },
+      FirefoxLg: {
+        base: 'Firefox',
+        flags: [
+          '--window-size=1920,1080',
+          '--window-position==0,0'
+        ]
+      }
+    },
     frameworks: ['mocha', 'sinon-chai', 'phantomjs-shim'],
     reporters: ['spec', 'coverage'],
     files: ['./index.js'],
