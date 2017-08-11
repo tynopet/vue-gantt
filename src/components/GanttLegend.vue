@@ -1,10 +1,10 @@
 <template>
   <div class="vue-gantt-legend">
-    <div class="title" :title="legendHelp">Легенда (?)</div>
-    <div class="task" v-for="(row, index) in rows" :key="index" @click="$emit('task-clicked', row.start)">
+    <div class="title" :title="legendHelp">Legend (?)</div>
+    <div class="task" v-for="(row, index) in rows" :key="index" :title="`From ${row.from} to ${row.to}`" @click="$emit('task-click', row.start)">
       <span class="task-name">{{row.name}}</span>
       <span class="task-link">
-        <a :href="row.link">...</a>
+        <a @click="row.link">...</a>
       </span>
     </div>
   </div>
@@ -55,5 +55,10 @@ export default {
   height: 24px;
   margin: 0;
   width: 100%;
+}
+
+.vue-gantt-legend .task .task-name {
+  font-weight: bold;
+  padding: 0 10px;
 }
 </style>

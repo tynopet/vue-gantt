@@ -1,8 +1,8 @@
 <template>
   <div class="vue-gantt-footer">
-    <input type="range" class="interval" :min="startDate" :max="endDate" :step="step" :value="period" @input="$emit('period-change', $event)">
+    <input type="range" class="scroll" :min="startDate" :max="endDate" :step="step" :value="period" @input="$emit('period-change', $event)">
     <select :value="scales[selected]" @change="$emit('scale-change', $event)">
-      <option v-for="scale in scales" :key="scale">{{ scale }}</option>
+      <option v-for="scale in scales" :key="scale" :value="scale">{{ scale }}</option>
     </select>
   </div>
 </template>
@@ -46,7 +46,7 @@ export default {
   box-sizing: border-box;
 }
 
-.vue-gantt-footer .interval {
+.vue-gantt-footer .scroll {
   flex-grow: 1;
 }
 </style>

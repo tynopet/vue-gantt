@@ -1,7 +1,7 @@
 <template>
   <div class="vue-gantt gantt-column">
     <div class="gantt-row">
-      <gantt-legend :rows="tasks" :legendHelp="legendHelp" ref="legend" @task-clicked="handleTaskClicked"></gantt-legend>
+      <gantt-legend :rows="tasks" :legendHelp="legendHelp" ref="legend" @task-click="handleTaskClick"></gantt-legend>
       <div class="gantt-column" @wheel.prevent="handleWheel" :style="{ width: cellsCount * 24 }">
         <gantt-header :rows="header" @header-click="handleHeaderClick"></gantt-header>
         <gantt-body :tasks="body"></gantt-body>
@@ -18,11 +18,13 @@ import {
   calcMaxScale,
   calcViewport,
   createOptions,
+  getEndOfScale,
   getMsInScale,
   getMinDate,
   getMaxDate,
+  getViewportInMilliseconds,
   normalizeDate,
-  transformInputvalues,
+  transformInputValues,
 } from '@/hellpers';
 import GanttLegend from './GanttLegend';
 import GanttHeader from './GanttHeader';
@@ -53,18 +55,9 @@ export default {
       required: true,
     },
   },
-  created() {
-    const { rows, legendHelp } = this.data;
-    const { startDate, endDate, values, tasks } = transformInputvalues(rows);
-    this.legendHelp = legendHelp;
-    this.startDate = startDate;
-    this.endDate = endDate;
-    this.values = values.map(value => value.sort((a, b) => a.from - b.from));
-    this.tasks = tasks;
-  },
   mounted() {
-    this.cellsCount = Math.ceil((this.$el.clientWidth - this.$refs.legend.$el.clientWidth)
-      / defaultOptions.cellWidth);
+    window.addEventListener('resize', this.setCellsCount);
+    this.setCellsCount();
     const maxScaleIdx = calcMaxScale(this.startDate, this.endDate, this.cellsCount, this.scales);
     const [scale, step] = this.scales[maxScaleIdx].split(' ');
     this.scale = scale;
@@ -72,21 +65,38 @@ export default {
     this.scales = this.scales.filter((_, idx) => idx >= maxScaleIdx);
     this.viewportStart = this.min;
   },
+  beforeDestroy() {
+    window.removeEventListener('resize', this.setCellsCount);
+  },
   data() {
     return {
-      startDate: null,
-      endDate: null,
       viewportStart: 0,
       cellsCount: 0,
-      legendHelp: '',
-      tasks: [],
       scales: createOptions(defaultOptions.scales),
       scale: defaultOptions.scales[0].scale,
       step: defaultOptions.scales[0].steps[0],
-      values: [],
     };
   },
   computed: {
+    parsedProps() {
+      const { rows } = this.data;
+      return transformInputValues(rows);
+    },
+    legendHelp() {
+      return this.data.legendHelp;
+    },
+    startDate() {
+      return this.parsedProps.startDate;
+    },
+    endDate() {
+      return this.parsedProps.endDate;
+    },
+    values() {
+      return this.parsedProps.values.map(value => value.sort((a, b) => a.from - b.from));
+    },
+    tasks() {
+      return this.parsedProps.tasks;
+    },
     body() {
       return calcBody(this.viewport, this.values, this.msInCell, defaultOptions.cellWidth);
     },
@@ -95,7 +105,9 @@ export default {
     },
     max() {
       return getMaxDate(
-        this.endDate, this.scale, this.step, this.min, this.msInCell, this.cellsCount,
+        getEndOfScale(this.scale, this.endDate)
+        - getViewportInMilliseconds(this.endDate, this.scale, this.step, this.cellsCount),
+        this.min, this.msInCell,
       );
     },
     min() {
@@ -112,6 +124,10 @@ export default {
     },
   },
   methods: {
+    setCellsCount() {
+      this.cellsCount = Math.ceil((this.$el.clientWidth - this.$refs.legend.$el.clientWidth)
+        / defaultOptions.cellWidth);
+    },
     handleScaleChange(e) {
       const [scale, step] = e.target.value.split(' ');
       if (this.scale !== scale) this.scale = scale;
@@ -142,15 +158,17 @@ export default {
       }
     },
     handleHeaderClick({ date, scale }) {
-      this.scale = scale;
-      this.step = 1;
-      if (date > this.max) this.viewportStart = this.max;
-      else if (date < this.min) this.viewportStart = this.min;
-      else this.viewportStart = date;
+      if (this.scales.includes(`${scale} 1`)) {
+        this.scale = scale;
+        this.step = 1;
+        if (date > this.max) this.viewportStart = this.max;
+        else if (date < this.min) this.viewportStart = this.min;
+        else this.viewportStart = date;
+      }
     },
-    handleTaskClicked(start) {
+    handleTaskClick(start) {
       const viewportStart = normalizeDate(start, this.scale, this.step);
-      this.viewportStart = viewportStart > this.max ? this.max : viewportStart;
+      this.viewportStart = Math.min(viewportStart, this.max);
     },
   },
 };

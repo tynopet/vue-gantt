@@ -19,7 +19,7 @@ import differenceInMilliseconds from 'date-fns/difference_in_milliseconds';
 import getYear from 'date-fns/get_year';
 import getMonth from 'date-fns/get_month';
 import getDate from 'date-fns/get_date';
-import getdayOfYear from 'date-fns/get_day_of_year';
+import getDayOfYear from 'date-fns/get_day_of_year';
 import getHours from 'date-fns/get_hours';
 import getMinutes from 'date-fns/get_minutes';
 import getSeconds from 'date-fns/get_seconds';
@@ -42,7 +42,6 @@ import differenceInDays from 'date-fns/difference_in_days';
 import isAfter from 'date-fns/is_after';
 import isBefore from 'date-fns/is_before';
 import format from 'date-fns/format';
-import ruLocale from 'date-fns/locale/ru';
 import compareAsc from 'date-fns/compare_asc';
 import memoize from 'lodash/memoize';
 import capitalize from 'lodash/capitalize';
@@ -91,16 +90,27 @@ const intervals = {
   seconds: 'minutes',
 };
 
-export const createOptions = scales => scales.reduce((acc, { scale, steps }) =>
-  acc.concat(steps.map(step => `${scale} ${step}`)), []);
+export const createOptions = (scales) => {
+  if (Array.isArray(scales)) {
+    return scales.reduce((acc, { scale, steps }) => {
+      if (Array.isArray(steps)) {
+        return [...acc, ...steps.map(step => `${scale} ${step}`)];
+      }
+      throw new TypeError('Expected array');
+    }, []);
+  }
+  throw new TypeError('Expected array');
+};
 
-export const transformInputvalues = rows => rows.reduce((acc, { link, name, values }) => {
+export const transformInputValues = rows => rows.reduce((acc, { link, name, values }) => {
   const dates = values.reduce((r, { from, to }) => ({
     startDate: r.startDate ? min(r.startDate, parse(from)) : parse(from),
     endDate: r.endDate ? max(r.endDate, parse(to)) : parse(to),
   }), {});
   const task = {
     link,
+    from: format(dates.startDate, 'DD-MM-YYYY HH:mm:ss'),
+    to: format(dates.endDate, 'DD-MM-YYYY HH:mm:ss'),
     name,
     start: getTime(dates.startDate),
   };
@@ -117,18 +127,20 @@ export const getMinDate = (startDate, scale) => {
   return getTime(method(startDate));
 };
 
-const getViewportInMilliseconds = (start, scale, step, cellsCount) => {
+export const getViewportInMilliseconds = (start, scale, step, cellsCount) => {
   const startDate = parse(start);
   const endDate = addDateFunctions[scale](parse(start), cellsCount * parseInt(step, 10));
   return differenceInMilliseconds(endDate, startDate);
 };
 
-export const getMaxDate = (endDate, scale, step, minDate, msInCell, cellsCount) => {
+export const getEndOfScale = (scale, endDate) => {
   const method = endDateFunctions[intervals[scale]];
-  const tmpMax = getTime(method(endDate))
-    - getViewportInMilliseconds(endDate, scale, step, cellsCount);
-  const maxDate = tmpMax < minDate ? minDate : tmpMax;
-  return maxDate + (msInCell - ((maxDate - minDate) % msInCell));
+  return getTime(method(endDate));
+};
+
+export const getMaxDate = (maxDate, minDate, msInCell) => {
+  const date = Math.max(maxDate, minDate);
+  return date + (msInCell - ((date - minDate) % msInCell));
 };
 
 export const getMsInScale = memoize((scale) => {
@@ -154,78 +166,90 @@ export const calcViewport = (start, scale, step, cellsCount) => {
   return { startDate, endDate };
 };
 
-export const calcBody = memoize(({ startDate, endDate }, rows, msInCell, cellWidth) =>
+export const transformRow = ({ startDate, endDate }, msInCell, cellWidth) =>
+  ({ from, to, desc, color, title }, idx) => {
+    // hardcode msInCell for month scale
+    const msInCellWithTolerance = msInCell === 2678400000 ? (365 / 12) * 8.64e7 : msInCell;
+    const offset = idx === 0 && (isAfter(from, startDate) && isBefore(from, endDate))
+      ? Math.ceil(((from - startDate) / msInCellWithTolerance) * cellWidth)
+      : 0;
+    const intervalStart = (isBefore(from, startDate) && isAfter(to, startDate))
+      ? startDate
+      : from;
+    const intervalEnd = (isBefore(from, endDate) && isAfter(to, endDate)) ? endDate : to;
+    const display = !(compareAsc(from, endDate) >= 0 || compareAsc(to, startDate) <= 0);
+    const width = Math.ceil(
+      ((intervalEnd - intervalStart) / msInCellWithTolerance) * cellWidth,
+    );
+    return {
+      width,
+      offset: (width < 8 && offset > 0) ? offset - (8 - width) : offset,
+      desc,
+      color,
+      title,
+      display,
+      from: format(from, 'DD-MM-YYYY HH:mm:ss'),
+      to: format(to, 'DD-MM-YYYY HH:mm:ss'),
+    };
+  };
+
+export const calcBody = ({ startDate, endDate }, rows, msInCell, cellWidth) =>
   rows.map(row =>
-    row.map(({ from, to, desc, color }, idx) => {
-      const offset = idx === 0 && (isAfter(from, startDate) && isBefore(from, endDate))
-        ? Math.ceil(((from - startDate) / msInCell) * cellWidth)
-        : 0;
-      const intervalStart = (isBefore(from, startDate) && isAfter(to, startDate))
-        ? startDate
-        : from;
-      const intervalEnd = (isBefore(from, endDate) && isAfter(to, endDate)) ? endDate : to;
-      const display = !(compareAsc(from, endDate) >= 0 || compareAsc(to, startDate) <= 0);
-      // hardcode msInCell for month scale
-      const msInCellWithTolerance = msInCell === 2678400000 ? (365 / 12) * 8.64e7 : msInCell;
-      const width = Math.ceil(
-        ((intervalEnd - intervalStart) / msInCellWithTolerance) * cellWidth,
-      );
-      return {
-        width,
-        offset: (width < 8 && offset > 0) ? offset - (8 - width) : offset,
-        desc,
-        color,
-        display,
-      };
-    }),
-  ));
+    row.map(transformRow({ startDate, endDate }, msInCell, cellWidth)),
+  );
 
 // For header
-const mGetMonthsInYear = memoize((start, end) => {
+export const mGetMonthsInYear = memoize((start, end) => {
   if (isSameYear(start, end)) {
     return (getMonth(end) - getMonth(start));
   }
   return (12 - getMonth(start));
 });
 
-const mGetMonthsInQuarter = memoize((start, end) => {
+export const mGetMonthsInQuarter = memoize((start, end) => {
   if (isSameQuarter(start, end)) {
     return (getMonth(end) - getMonth(start));
   }
   return (3 - (getMonth(start) % 3));
 });
 
-const mGetDaysInYear = memoize((start, end) => {
+export const mGetDaysInYear = memoize((start, end) => {
   if (isSameYear(start, end)) {
     return differenceInDays(end, start) + 1;
   }
-  return (getDaysInYear(start) - getdayOfYear(start)) + 1;
+  return (getDaysInYear(start) - getDayOfYear(start)) + 1;
 });
 
-const mGetDaysInMonth = memoize((start, end) => {
+export const mGetDaysInMonth = memoize((start, end) => {
   if (isSameMonth(start, end)) {
-    return (getDate(end) - getDate(start)) + 1;
+    const maxDays = (getTime(end) - getTime(start)) / 86400000;
+    const days = (getDate(end) - getDate(start)) + 1;
+    return Math.min(days, maxDays);
   }
   return (getDaysInMonth(start) - getDate(start) - (getHours(start) / 24)) + 1;
 });
 
-const mGetHoursInDay = memoize((start, end, step) => {
+export const mGetHoursInDay = memoize((start, end, step) => {
   if (isSameDay(start, end)) {
-    return ((getHours(end) - getHours(start)) + 1) / step;
+    const maxHours = (getTime(end) - getTime(start)) / 3600000 / step;
+    const hours = ((getHours(end) - getHours(start)) + 1) / step;
+    return Math.min(hours, maxHours);
   }
   return (24 - getHours(start) - (getMinutes(start) / 60)) / step;
 });
 
-const mGetMinutesInHour = memoize((start, end, step) => {
+export const mGetMinutesInHour = memoize((start, end, step) => {
   if (isSameHour(start, end)) {
-    return ((getMinutes(end) - getMinutes(start)) + 1) / step;
+    const maxMinutes = (getTime(end) - getTime(start)) / 60000 / step;
+    const minutes = ((getMinutes(end) - getMinutes(start) - (getSeconds(start) / 60)) + 1) / step;
+    return Math.min(minutes, maxMinutes);
   }
   return (60 - getMinutes(start) - (getSeconds(start) / 60)) / step;
 });
 
-const mGetSecondsInMinute = memoize((start, end, step) => {
+export const mGetSecondsInMinute = memoize((start, end, step) => {
   if (isSameMinute(start, end)) {
-    return ((getSeconds(end) - getSeconds(start)) + 1) / step;
+    return ((getSeconds(end) - getSeconds(start))) / step;
   }
   return (60 - getSeconds(start)) / step;
 });
@@ -235,7 +259,7 @@ const switchScale = (scale, step) => {
     case 'months':
       return [
         {
-          method: date => capitalize(format(date, 'YYYY', { locale: ruLocale })),
+          method: date => capitalize(format(date, 'YYYY')),
           addType: addYears,
           start: startOfYear,
           add: 1,
@@ -244,7 +268,7 @@ const switchScale = (scale, step) => {
           get: mGetMonthsInYear,
         },
         {
-          method: date => capitalize(format(date, 'Q', { locale: ruLocale })),
+          method: date => capitalize(format(date, 'Q')),
           addType: addQuarters,
           start: startOfQuarter,
           add: 1,
@@ -253,7 +277,7 @@ const switchScale = (scale, step) => {
           get: mGetMonthsInQuarter,
         },
         {
-          method: date => capitalize(format(date, 'M', { locale: ruLocale })),
+          method: date => capitalize(format(date, 'M')),
           addType: addMonths,
           start: startOfMonth,
           add: 1,
@@ -265,7 +289,7 @@ const switchScale = (scale, step) => {
     case 'days':
       return [
         {
-          method: date => capitalize(format(date, 'YYYY', { locale: ruLocale })),
+          method: date => capitalize(format(date, 'YYYY')),
           addType: addYears,
           start: startOfYear,
           add: 1,
@@ -274,7 +298,7 @@ const switchScale = (scale, step) => {
           get: mGetDaysInYear,
         },
         {
-          method: date => capitalize(format(date, 'MMM', { locale: ruLocale })),
+          method: date => capitalize(format(date, 'MMM')),
           addType: addMonths,
           start: startOfMonth,
           add: 1,
@@ -283,7 +307,7 @@ const switchScale = (scale, step) => {
           get: mGetDaysInMonth,
         },
         {
-          method: date => capitalize(format(date, 'D', { locale: ruLocale })),
+          method: date => capitalize(format(date, 'D')),
           addType: addDays,
           start: startOfDay,
           add: parseInt(step, 10),
@@ -295,7 +319,7 @@ const switchScale = (scale, step) => {
     case 'hours':
       return [
         {
-          method: date => capitalize(format(date, 'MMM', { locale: ruLocale })),
+          method: date => capitalize(format(date, 'MMM')),
           addType: addMonths,
           start: startOfMonth,
           add: 1,
@@ -304,7 +328,7 @@ const switchScale = (scale, step) => {
           get: mGetDaysInMonth,
         },
         {
-          method: date => capitalize(format(date, 'D', { locale: ruLocale })),
+          method: date => capitalize(format(date, 'D')),
           addType: addDays,
           start: startOfDay,
           add: 1,
@@ -313,7 +337,7 @@ const switchScale = (scale, step) => {
           get: mGetHoursInDay,
         },
         {
-          method: date => capitalize(format(date, 'H', { locale: ruLocale })),
+          method: date => capitalize(format(date, 'H')),
           addType: addHours,
           start: startOfHour,
           add: parseInt(step, 10),
@@ -325,7 +349,7 @@ const switchScale = (scale, step) => {
     case 'minutes':
       return [
         {
-          method: date => capitalize(format(date, 'D', { locale: ruLocale })),
+          method: date => capitalize(format(date, 'D')),
           addType: addDays,
           start: startOfDay,
           add: 1,
@@ -334,7 +358,7 @@ const switchScale = (scale, step) => {
           get: mGetHoursInDay,
         },
         {
-          method: date => capitalize(format(date, 'H', { locale: ruLocale })),
+          method: date => capitalize(format(date, 'H')),
           addType: addHours,
           start: startOfHour,
           add: 1,
@@ -343,7 +367,7 @@ const switchScale = (scale, step) => {
           get: mGetMinutesInHour,
         },
         {
-          method: date => capitalize(format(date, 'm', { locale: ruLocale })),
+          method: date => capitalize(format(date, 'm')),
           addType: addMinutes,
           start: startOfMinute,
           add: parseInt(step, 10),
@@ -355,7 +379,7 @@ const switchScale = (scale, step) => {
     case 'seconds':
       return [
         {
-          method: date => capitalize(format(date, 'H', { locale: ruLocale })),
+          method: date => capitalize(format(date, 'H')),
           addType: addHours,
           start: startOfHour,
           add: 1,
@@ -364,7 +388,7 @@ const switchScale = (scale, step) => {
           get: mGetMinutesInHour,
         },
         {
-          method: date => capitalize(format(date, 'm', { locale: ruLocale })),
+          method: date => capitalize(format(date, 'm')),
           addType: addMinutes,
           start: startOfMinute,
           add: 1,
@@ -373,7 +397,7 @@ const switchScale = (scale, step) => {
           get: mGetSecondsInMinute,
         },
         {
-          method: date => capitalize(format(date, 's', { locale: ruLocale })),
+          method: date => capitalize(format(date, 's')),
           addType: addSeconds,
           start: startOfSecond,
           add: parseInt(step, 10),
