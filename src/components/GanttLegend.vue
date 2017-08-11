@@ -4,7 +4,7 @@
     <div class="task" v-for="(row, index) in rows" :key="index" :title="`From ${row.from} to ${row.to}`" @click="$emit('task-click', row.start)">
       <span class="task-name">{{row.name}}</span>
       <span class="task-link">
-        <a @click="row.link">...</a>
+        <a :href="row.link" target="_blank">...</a>
       </span>
     </div>
   </div>
