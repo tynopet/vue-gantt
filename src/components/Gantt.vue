@@ -25,7 +25,7 @@ import {
   getViewportInMilliseconds,
   normalizeDate,
   transformInputValues,
-} from '@/hellpers';
+} from './../hellpers';
 import GanttLegend from './GanttLegend';
 import GanttHeader from './GanttHeader';
 import GanttBody from './GanttBody';

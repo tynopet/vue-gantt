@@ -1,9 +1,14 @@
 {
-  "name": "gantt",
-  "version": "1.0.0",
-  "description": "Gantt diagramm for onyma CRM",
-  "author": "tynopet <dimangud@rambler.ru>",
-  "private": true,
+  "name": "vue-gantt",
+  "version": "1.0.1",
+  "description": "Vue component for display Gantt Diagramm",
+  "author": "Dmitry Gudenkov (tynopet) <dimangud1994@gmail.com>",
+  "license": "MIT",
+  "main": "src/index.js",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tynopet/vue-gantt.git"
+  },
   "scripts": {
     "dev": "node build/dev-server.js",
     "start": "node build/dev-server.js",
