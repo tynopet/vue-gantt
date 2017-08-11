@@ -167,7 +167,7 @@ export const calcViewport = (start, scale, step, cellsCount) => {
 };
 
 export const transformRow = ({ startDate, endDate }, msInCell, cellWidth) =>
-  ({ from, to, desc, color, title }, idx) => {
+  ({ from, to, desc, color }, idx) => {
     // hardcode msInCell for month scale
     const msInCellWithTolerance = msInCell === 2678400000 ? (365 / 12) * 8.64e7 : msInCell;
     const offset = idx === 0 && (isAfter(from, startDate) && isBefore(from, endDate))
@@ -186,7 +186,6 @@ export const transformRow = ({ startDate, endDate }, msInCell, cellWidth) =>
       offset: (width < 8 && offset > 0) ? offset - (8 - width) : offset,
       desc,
       color,
-      title,
       display,
       from: format(from, 'DD-MM-YYYY HH:mm:ss'),
       to: format(to, 'DD-MM-YYYY HH:mm:ss'),
